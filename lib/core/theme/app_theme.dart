@@ -10,8 +10,19 @@ class AppColors {
   static const page = Color(0xFFF5F8FD);
   static const danger = Color(0xFFD92D4A);
 
+  // Splash / onboarding (sampled from the design files)
+  static const logoTile = Color(0xFF011027);
+  static const darkButton = Color(0xFF021536);
+
   static const blueGradient = LinearGradient(colors: [blueDark, blueLight]);
   static const greenGradient = LinearGradient(colors: [greenEmerald, greenLime]);
+
+  static const brandBackground = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFF022568), Color(0xFF021D4E), Color(0xFF021431)],
+    stops: [0.0, 0.5, 1.0],
+  );
 }
 
 ThemeData buildTheme() {

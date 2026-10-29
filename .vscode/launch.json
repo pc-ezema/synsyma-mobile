@@ -12,6 +12,12 @@
       "request": "launch",
       "type": "dart",
       "args": ["--dart-define-from-file=env/dev.json"]
+    },
+    {
+      "name": "synsyma web",
+      "request": "launch",
+      "type": "dart",
+      "args": ["-d", "web-server", "--web-port=5555", "--dart-define-from-file=env/web.json"]
     }
   ]
 }

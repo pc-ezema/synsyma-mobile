@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 
@@ -12,6 +13,11 @@ class AuthState {
 final authProvider = NotifierProvider<AuthController, AuthState>(AuthController.new);
 
 class AuthController extends Notifier<AuthState> {
+  final _ready = Completer<void>();
+
+  /// Completes once the saved token (if any) has been checked.
+  Future<void> get ready => _ready.future;
+
   @override
   AuthState build() {
     Future.microtask(_restore);
@@ -21,6 +27,7 @@ class AuthController extends Notifier<AuthState> {
   Future<void> _restore() async {
     final token = await ref.read(storageProvider).read(key: tokenKey);
     state = AuthState(token == null ? AuthStatus.signedOut : AuthStatus.signedIn);
+    if (!_ready.isCompleted) _ready.complete();
   }
 
   /// Expects POST /auth/login -> { token, user } (optionally wrapped in "data").
