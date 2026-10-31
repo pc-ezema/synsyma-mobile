@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
+import 'auth_repository.dart';
+
+const refreshTokenKey = 'refresh_token';
+const lastFirstNameKey = 'last_first_name';
 
 enum AuthStatus { unknown, signedOut, signedIn }
 
@@ -30,28 +34,32 @@ class AuthController extends Notifier<AuthState> {
     if (!_ready.isCompleted) _ready.complete();
   }
 
-  /// Expects POST /auth/login -> { token, user } (optionally wrapped in "data").
+  /// Throws ApiError on failure.
   Future<void> login(String email, String password) async {
-    final res = await ref.read(dioProvider).post('/auth/login', data: {
-      'email': email,
-      'password': password,
-      'device_name': 'mobile-app',
-    });
-    final body = res.data as Map<String, dynamic>;
-    final data = (body['data'] ?? body) as Map<String, dynamic>;
-    await ref.read(storageProvider).write(key: tokenKey, value: data['token'] as String);
-    state = AuthState(AuthStatus.signedIn, data['user'] as Map<String, dynamic>?);
+    final data = await ref.read(authRepositoryProvider).login(email, password);
+
+    final storage = ref.read(storageProvider);
+    await storage.write(key: tokenKey, value: data['token'] as String);
+    await storage.write(key: refreshTokenKey, value: data['refresh_token'] as String);
+    final first = data['first_name']?.toString();
+    if (first != null && first.isNotEmpty) {
+      await storage.write(key: lastFirstNameKey, value: first); // for "Welcome back"
+    }
+
+    state = AuthState(AuthStatus.signedIn, data);
   }
 
   Future<void> logout() async {
     try {
-      await ref.read(dioProvider).post('/auth/logout');
+      await ref.read(authRepositoryProvider).logout();
     } catch (_) {/* clear locally either way */}
     await expireSession();
   }
 
   Future<void> expireSession() async {
-    await ref.read(storageProvider).delete(key: tokenKey);
+    final storage = ref.read(storageProvider);
+    await storage.delete(key: tokenKey);
+    await storage.delete(key: refreshTokenKey);
     state = const AuthState(AuthStatus.signedOut);
   }
 }

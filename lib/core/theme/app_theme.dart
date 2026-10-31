@@ -14,6 +14,12 @@ class AppColors {
   static const logoTile = Color(0xFF011027);
   static const darkButton = Color(0xFF021536);
 
+  // Light auth screens (sampled from the design files)
+  static const authBg = Color(0xFFF2F3F7);
+  static const fieldBorder = Color(0xFFDDE0E5);
+  static const successGreen = Color(0xFF04D442);
+  static const successCheck = Color(0xFF021F55);
+
   static const blueGradient = LinearGradient(colors: [blueDark, blueLight]);
   static const greenGradient = LinearGradient(colors: [greenEmerald, greenLime]);
 
