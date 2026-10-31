@@ -30,6 +30,11 @@ class AuthScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The design leaves ~44px for the phone's status bar. A browser has none,
+    // so top up the difference and the spacing matches on every device.
+    final statusInset = MediaQuery.paddingOf(context).top;
+    final extraTop = statusInset < 44 ? 44 - statusInset : 0.0;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
@@ -44,14 +49,29 @@ class AuthScaffold extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    SizedBox(height: extraTop),
                     if (showBack)
-                      IconButton(
-                        tooltip: 'Back',
-                        padding: EdgeInsets.zero,
-                        alignment: Alignment.centerLeft,
-                        constraints: const BoxConstraints(minWidth: 44, minHeight: 56),
-                        icon: const Icon(Icons.chevron_left_rounded, size: 30, color: AppColors.navy),
-                        onPressed: () => context.canPop() ? context.pop() : context.go('/login'),
+                      SizedBox(
+                        height: 44,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          // Nudged left so the arrow lines up with the page text.
+                          child: Transform.translate(
+                            offset: const Offset(-12, 0),
+                            child: IconButton(
+                              tooltip: 'Back',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                              icon: const Icon(
+                                Icons.chevron_left_rounded,
+                                size: 30,
+                                color: AppColors.navy,
+                              ),
+                              onPressed: () =>
+                                  context.canPop() ? context.pop() : context.go('/login'),
+                            ),
+                          ),
+                        ),
                       )
                     else
                       SizedBox(height: topPadding),

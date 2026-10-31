@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import '../config/env.dart';
 
 /// A readable error from the API (or from a failed connection).
 class ApiError implements Exception {
@@ -25,7 +27,13 @@ class ApiError implements Exception {
       final res = error.response;
       final body = res?.data;
       if (res == null || body is! Map) {
-        return const ApiError("Can't reach the server. Check your connection and try again.");
+        // Test builds show the real reason; production keeps the friendly text.
+        final detail = Env.name == 'prod'
+            ? ''
+            : ' [${error.type.name}: ${error.error ?? error.message} | '
+                'status ${res?.statusCode} | ${error.requestOptions.uri}]';
+        debugPrint('API failure: ${error.type.name} ${error.error} ${error.requestOptions.uri}');
+        return ApiError("Can't reach the server. Check your connection and try again.$detail");
       }
 
       final fields = <String, String>{};
