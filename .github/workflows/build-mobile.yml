@@ -26,6 +26,14 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
 
+       # ---- DIAGNOSTIC: what does CI see? ----
+      - name: Debug env file
+        run: |
+          echo "=== pwd ===" && pwd
+          echo "=== ls env/ ===" && ls -la env/
+          echo "=== cat env/dev.json ===" && cat env/dev.json
+          echo "=== flutter --version ===" && flutter --version
+          
       # dev branch: installable APK for testers
       - name: Build dev APK
         if: github.ref_name == 'dev'
