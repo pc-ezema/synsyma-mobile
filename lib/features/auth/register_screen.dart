@@ -87,7 +87,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     return AuthScaffold(
       showBack: false,
-      topPadding: 36,
+      topPadding: 28,
       title: 'Create An Account',
       subtitle: 'Sign up to get started!',
       children: [

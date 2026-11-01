@@ -74,7 +74,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return AuthScaffold(
       showBack: false,
-      topPadding: 48,
+      topPadding: 24,
       children: [
         Row(
           children: [
