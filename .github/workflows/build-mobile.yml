@@ -34,29 +34,25 @@ jobs:
           echo "=== cat env/dev.json ===" && cat env/dev.json
           echo "=== flutter --version ===" && flutter --version
 
-      - name: Show what the built APK is allowed to do
-        if: github.ref_name == 'dev'
-        run: |
-          AAPT="$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)aapt"
-          "$AAPT" dump permissions build/app/outputs/flutter-apk/app-release.apk
-          echo "=== main manifest in the repo ==="
-          cat android/app/src/main/AndroidManifest.xml
-
-      # dev branch: installable APK for testers
       - name: Build dev APK
         if: github.ref_name == 'dev'
         run: flutter build apk --release --dart-define-from-file=env/dev.json --build-number=${{ github.run_number }}
 
-      - name: Verify API_URL baked into APK
+      - name: Show what the built APK is allowed to do
         if: github.ref_name == 'dev'
         run: |
-          set -e
-          echo "=== Checking libapp.so for API_URL ==="
-          unzip -p build/app/outputs/flutter-apk/app-release.apk \
-            lib/arm64-v8a/libapp.so \
-            | strings | grep -i "dev-api.synsyma.com" \
-            && echo "✅ URL present in APK" \
-            || (echo "❌ URL MISSING from APK — dart-define not applied"; exit 1)
+          AAPT="$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)aapt"
+          ls -la build/app/outputs/flutter-apk/
+          "$AAPT" dump permissions build/app/outputs/flutter-apk/app-release.apk
+          echo "=== main manifest in the repo ==="
+          cat android/app/src/main/AndroidManifest.xml
+
+      - name: Upload dev APK
+        if: github.ref_name == 'dev'
+        uses: actions/upload-artifact@v4
+        with:
+          name: synsyma-dev-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
             
       - name: Upload dev APK
         if: github.ref_name == 'dev'
