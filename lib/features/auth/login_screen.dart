@@ -85,7 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       children: [
         Row(
           children: [
-            _Avatar(name: _lastName),
+            _Avatar(name: _lastName, photoUrl: _lastPhotoUrl),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
