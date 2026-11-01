@@ -53,13 +53,6 @@ jobs:
         with:
           name: synsyma-dev-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-            
-      - name: Upload dev APK
-        if: github.ref_name == 'dev'
-        uses: actions/upload-artifact@v4
-        with:
-          name: synsyma-dev-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
 
       # prod branch: signed bundle for Google Play
       - name: Set up signing
