@@ -10,7 +10,11 @@ import '../../features/auth/reset_code_screen.dart';
 import '../../features/auth/success_screen.dart';
 import '../../features/auth/verify_email_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/home/main_tab.dart';
 import '../../features/onboarding/onboarding_screen.dart';
+import '../../features/profile/change_password_screens.dart';
+import '../../features/profile/edit_profile_screen.dart';
+import '../../features/profile/terms_screen.dart';
 import '../../features/splash/splash_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -31,6 +35,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     '/password-updated',
   };
 
+  // Open to everyone, signed in or not.
+  const openToAll = {'/splash', '/terms'};
+
   String? needEmail(GoRouterState s) =>
       (s.uri.queryParameters['email'] ?? '').isEmpty ? '/login' : null;
 
@@ -46,11 +53,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (status == AuthStatus.unknown) return loc == '/splash' ? null : '/splash';
 
       if (status == AuthStatus.signedOut) {
-        return (loc == '/splash' || guestOnly.contains(loc)) ? null : '/login';
+        return (openToAll.contains(loc) || guestOnly.contains(loc)) ? null : '/login';
       }
 
-      // Signed in: keep them off the guest screens. The splash screen
-      // sends them to /home itself once its minimum display time is over.
       return guestOnly.contains(loc) ? '/home' : null;
     },
     routes: [
@@ -85,7 +90,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/new-password',
-        // The reset token only lives in memory, so a browser refresh starts over.
         redirect: (_, s) => s.extra is Map ? null : '/forgot-password',
         builder: (_, s) {
           final extra = s.extra! as Map;
@@ -103,7 +107,41 @@ final routerProvider = Provider<GoRouter>((ref) {
           onContinue: () => context.go('/login'),
         ),
       ),
+      GoRoute(path: '/terms', builder: (_, __) => const TermsScreen()),
+
+      // Signed-in area
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+      GoRoute(
+        path: '/profile/edit/:field',
+        builder: (_, s) => EditProfileScreen(
+          field: ProfileField.values.asNameMap()[s.pathParameters['field']] ?? ProfileField.phone,
+        ),
+      ),
+      GoRoute(path: '/profile/password', builder: (_, __) => const PasswordEmailScreen()),
+      GoRoute(
+        path: '/profile/password/code',
+        redirect: (_, s) => needEmail(s) == null ? null : '/profile/password',
+        builder: (_, s) => PasswordCodeScreen(
+          email: s.uri.queryParameters['email']!,
+          resendIn: resendOf(s),
+        ),
+      ),
+      GoRoute(
+        path: '/profile/password/new',
+        redirect: (_, s) => s.extra is Map ? null : '/profile/password',
+        builder: (_, s) => PasswordNewScreen(changeToken: (s.extra! as Map)['changeToken'] as String),
+      ),
+      GoRoute(
+        path: '/profile/password/done',
+        builder: (context, _) => SuccessScreen(
+          title: 'Password Updated Successfully',
+          subtitle: 'Your new password is ready to use',
+          onContinue: () {
+            ref.read(mainTabProvider.notifier).select(3); // back to the Profile tab
+            context.go('/home');
+          },
+        ),
+      ),
     ],
   );
 });

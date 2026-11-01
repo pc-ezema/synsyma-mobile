@@ -23,16 +23,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String? _banner;
   bool _loading = false;
   String? _lastName; // shown as "Welcome Back, <name>" for returning people
+  String? _lastPhotoUrl; 
 
   @override
   void initState() {
     super.initState();
-    _loadName();
+    _loadCachedProfile();
   }
 
-  Future<void> _loadName() async {
-    final name = await ref.read(storageProvider).read(key: lastFirstNameKey);
-    if (mounted && name != null && name.isNotEmpty) setState(() => _lastName = name);
+  Future<void> _loadCachedProfile() async {
+    final storage = ref.read(storageProvider);
+    final name = await storage.read(key: lastFirstNameKey);
+    final photo = await storage.read(key: lastPhotoUrlKey);  // NEW key
+    if (!mounted) return;
+    setState(() {
+      if (name != null && name.isNotEmpty) _lastName = name;
+      if (photo != null && photo.isNotEmpty) _lastPhotoUrl = photo;
+    });
   }
 
   @override
@@ -150,27 +157,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({this.name});
+  const _Avatar({this.name, this.photoUrl});
   final String? name;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
-    final hasName = name != null && name!.isNotEmpty;
-    return Container(
-      width: 50,
-      height: 50,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: hasName ? AppColors.blueGradient : null,
-        color: hasName ? null : AppColors.fieldBorder,
+    final initial =
+        (name != null && name!.isNotEmpty) ? name![0].toUpperCase() : null;
+    final hasPhoto = photoUrl != null && photoUrl!.isNotEmpty;
+
+    return ClipOval(
+      child: SizedBox(
+        width: 50,
+        height: 50,
+        child: hasPhoto
+            ? Image.network(
+                photoUrl!,
+                fit: BoxFit.cover,
+                // Fallback while loading, or on failure (404, offline, etc.)
+                loadingBuilder: (_, child, progress) =>
+                    progress == null ? child : _Fallback(initial: initial),
+                errorBuilder: (_, e, __) {
+                  debugPrint('[AVATAR] load failed: $e  url=$photoUrl');
+                  return _Fallback(initial: initial);
+                },
+              )
+            : _Fallback(initial: initial),
       ),
-      child: hasName
-          ? Text(
-              name![0].toUpperCase(),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-            )
-          : const Icon(Icons.person_outline, color: Color(0xFF6B7280)),
+    );
+  }
+}
+
+class _Fallback extends StatelessWidget {
+  const _Fallback({this.initial});
+  final String? initial;
+
+  @override
+  Widget build(BuildContext context) {
+    if (initial != null) {
+      return Container(
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(gradient: AppColors.blueGradient),
+        child: Text(
+          initial!,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
+        ),
+      );
+    }
+    return Container(
+      alignment: Alignment.center,
+      color: AppColors.fieldBorder,
+      child: const Icon(Icons.person_outline, color: Color(0xFF6B7280)),
     );
   }
 }

@@ -121,6 +121,9 @@ class AppTextField extends StatefulWidget {
     this.errorText,
     this.onChanged,
     this.onSubmitted,
+    this.readOnly = false,
+    this.helperText,
+    this.maxLines = 1,
   });
 
   final String label;
@@ -133,6 +136,9 @@ class AppTextField extends StatefulWidget {
   final String? errorText;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+  final bool readOnly;
+  final String? helperText;
+  final int maxLines;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -159,14 +165,19 @@ class _AppTextFieldState extends State<AppTextField> {
         TextField(
           controller: widget.controller,
           obscureText: _hidden,
-          keyboardType: widget.keyboardType,
+          readOnly: widget.readOnly,
+          maxLines: widget.obscure ? 1 : widget.maxLines,
+          keyboardType: widget.maxLines > 1 ? TextInputType.multiline : widget.keyboardType,
           textInputAction: widget.textInputAction,
           autofillHints: widget.autofillHints,
           autocorrect: !widget.obscure,
           enableSuggestions: !widget.obscure,
           onChanged: widget.onChanged,
           onSubmitted: widget.onSubmitted,
-          style: const TextStyle(fontSize: 14, color: AppColors.navy),
+          style: TextStyle(
+            fontSize: 14,
+            color: widget.readOnly ? const Color(0xFF6B7280) : AppColors.navy,
+          ),
           decoration: InputDecoration(
             hintText: widget.hint,
             hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9EA3B0)),
@@ -175,6 +186,9 @@ class _AppTextFieldState extends State<AppTextField> {
             errorText: widget.errorText,
             errorMaxLines: 2,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            helperText: widget.helperText,
+            helperMaxLines: 3,
+            counterText: '',
             suffixIcon: widget.obscure
                 ? IconButton(
                     tooltip: _hidden ? 'Show password' : 'Hide password',

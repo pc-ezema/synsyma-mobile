@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/gestures.dart';
 import '../../core/network/api_error.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/auth_widgets.dart';
@@ -158,7 +159,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 }
 
-class _TermsRow extends StatelessWidget {
+class _TermsRow extends StatefulWidget {
   const _TermsRow({required this.accepted, required this.onChanged, this.error});
 
   final bool accepted;
@@ -166,21 +167,39 @@ class _TermsRow extends StatelessWidget {
   final String? error;
 
   @override
+  State<_TermsRow> createState() => _TermsRowState();
+}
+
+class _TermsRowState extends State<_TermsRow> {
+  late final TapGestureRecognizer _toggle = TapGestureRecognizer()
+    ..onTap = () => widget.onChanged(!widget.accepted);
+  late final TapGestureRecognizer _open = TapGestureRecognizer()
+    ..onTap = () => context.push('/terms');
+
+  @override
+  void dispose() {
+    _toggle.dispose();
+    _open.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final accepted = widget.accepted;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(
-          checked: accepted,
-          label: 'I agree to the Terms and Conditions',
-          child: InkWell(
-            onTap: () => onChanged(!accepted),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  AnimatedContainer(
+        Row(
+          children: [
+            Semantics(
+              checked: accepted,
+              label: 'I agree to the Terms and Conditions',
+              child: InkWell(
+                onTap: () => widget.onChanged(!accepted),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
                     width: 22,
                     height: 22,
@@ -194,31 +213,31 @@ class _TermsRow extends StatelessWidget {
                     ),
                     child: accepted ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
                   ),
-                  const SizedBox(width: 10),
-                  // TODO: open your Terms & Conditions page (url_launcher) when you have the link.
-                  const Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        style: TextStyle(fontSize: 14, color: Color(0xFF3A3F4B)),
-                        children: [
-                          TextSpan(text: 'I Agree to the '),
-                          TextSpan(
-                            text: 'Terms & Conditions',
-                            style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.blueDark),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF3A3F4B)),
+                  children: [
+                    TextSpan(text: 'I Agree to the ', recognizer: _toggle),
+                    TextSpan(
+                      text: 'Terms & Conditions',
+                      recognizer: _open,
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.blueDark),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-        if (error != null)
+        if (widget.error != null)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 2),
-            child: Text(error!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
+            child: Text(widget.error!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
           ),
       ],
     );

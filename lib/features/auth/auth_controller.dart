@@ -5,6 +5,7 @@ import 'auth_repository.dart';
 
 const refreshTokenKey = 'refresh_token';
 const lastFirstNameKey = 'last_first_name';
+const lastPhotoUrlKey  = 'last_photo_url';
 
 enum AuthStatus { unknown, signedOut, signedIn }
 
@@ -39,11 +40,20 @@ class AuthController extends Notifier<AuthState> {
     final data = await ref.read(authRepositoryProvider).login(email, password);
 
     final storage = ref.read(storageProvider);
-    await storage.write(key: tokenKey, value: data['token'] as String);
+    await storage.write(key: tokenKey,        value: data['token'] as String);
     await storage.write(key: refreshTokenKey, value: data['refresh_token'] as String);
+
     final first = data['first_name']?.toString();
     if (first != null && first.isNotEmpty) {
-      await storage.write(key: lastFirstNameKey, value: first); // for "Welcome back"
+      await storage.write(key: lastFirstNameKey, value: first);
+    }
+
+    // ── NEW: cache the photo so the login screen can show it next time ──
+    final photo = data['photo_url']?.toString();
+    if (photo != null && photo.isNotEmpty) {
+      await storage.write(key: lastPhotoUrlKey, value: photo);
+    } else {
+      await storage.delete(key: lastPhotoUrlKey);
     }
 
     state = AuthState(AuthStatus.signedIn, data);

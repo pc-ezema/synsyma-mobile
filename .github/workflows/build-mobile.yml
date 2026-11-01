@@ -26,7 +26,7 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
 
-       # ---- DIAGNOSTIC: what does CI see? ----
+      # ---- DIAGNOSTIC: what does CI see? ----
       - name: Debug env file
         run: |
           echo "=== pwd ===" && pwd
@@ -34,6 +34,7 @@ jobs:
           echo "=== cat env/dev.json ===" && cat env/dev.json
           echo "=== flutter --version ===" && flutter --version
 
+      # dev branch: unsigned APK
       - name: Build dev APK
         if: github.ref_name == 'dev'
         run: flutter build apk --release --dart-define-from-file=env/dev.json --build-number=${{ github.run_number }}
