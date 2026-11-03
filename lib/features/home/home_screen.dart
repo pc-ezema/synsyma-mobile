@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../profile/profile_screen.dart';
+import '../chat/chat_tab.dart';
 import 'home_tab.dart';
 import 'main_tab.dart';
 
@@ -30,11 +31,7 @@ class HomeScreen extends ConsumerWidget {
                 title: 'Bookings',
                 message: 'Your booked services will show up here.',
               ),
-              _ComingSoon(
-                icon: Icons.chat_bubble_outline_rounded,
-                title: 'Chat',
-                message: 'Conversations with your service providers will show up here.',
-              ),
+              ChatTab(),
               ProfileScreen(),
             ],
           ),

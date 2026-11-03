@@ -20,6 +20,11 @@ class AppColors {
   static const successGreen = Color(0xFF04D442);
   static const successCheck = Color(0xFF021F55);
 
+  // Chat
+  static const chatBadge    = danger;         // (verify this is defined — chat_tab.dart uses it)
+  static const chatSent     = blueDark;       // 0xFF0066FF
+  static const chatReceived = Color(0xFFE9EDF5);
+
   static const blueGradient = LinearGradient(colors: [blueDark, blueLight]);
   static const greenGradient = LinearGradient(colors: [greenEmerald, greenLime]);
 

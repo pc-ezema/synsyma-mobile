@@ -34,7 +34,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _loadCachedProfile() async {
     final storage = ref.read(storageProvider);
     final name = await storage.read(key: lastFirstNameKey);
-    final photo = await storage.read(key: lastPhotoUrlKey);  // NEW key
+    final photo = await storage.read(key: lastPhotoUrlKey);
+    debugPrint('[CACHE] name=$name  photo=$photo');
     if (!mounted) return;
     setState(() {
       if (name != null && name.isNotEmpty) _lastName = name;

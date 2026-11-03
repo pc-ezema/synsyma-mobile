@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import 'auth_repository.dart';
+import '../push/push_service.dart';
 
 const refreshTokenKey = 'refresh_token';
 const lastFirstNameKey = 'last_first_name';
@@ -48,7 +49,6 @@ class AuthController extends Notifier<AuthState> {
       await storage.write(key: lastFirstNameKey, value: first);
     }
 
-    // ── NEW: cache the photo so the login screen can show it next time ──
     final photo = data['photo_url']?.toString();
     if (photo != null && photo.isNotEmpty) {
       await storage.write(key: lastPhotoUrlKey, value: photo);
@@ -60,6 +60,7 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    await ref.read(pushServiceProvider).unregisterDevice(); // while the token still works
     try {
       await ref.read(authRepositoryProvider).logout();
     } catch (_) {/* clear locally either way */}

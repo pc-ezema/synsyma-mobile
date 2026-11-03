@@ -16,6 +16,7 @@ import '../../features/profile/change_password_screens.dart';
 import '../../features/profile/edit_profile_screen.dart';
 import '../../features/profile/terms_screen.dart';
 import '../../features/splash/splash_screen.dart';
+import '../../features/chat/chat_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -111,6 +112,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Signed-in area
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+      GoRoute(path: '/chat', builder: (_, __) => const ChatScreen()),
       GoRoute(
         path: '/profile/edit/:field',
         builder: (_, s) => EditProfileScreen(
