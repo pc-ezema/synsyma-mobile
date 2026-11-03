@@ -65,8 +65,8 @@ class HelpScreen extends ConsumerWidget {
                 icon: Icons.chat_bubble_outline_rounded,
                 title: 'Send us a message',
                 onTap: () {
-                  context.pop(); // close Help, then show the Chat tab
-                  ref.read(mainTabProvider.notifier).state = 2; // TODO(3 of 3): your Chat tab index / setter
+                  ref.read(mainTabProvider.notifier).select(2); // the Chat tab
+                  context.pop(); // close Help, back to the tabs
                 },
               ),
             ]),
