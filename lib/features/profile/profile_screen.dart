@@ -246,6 +246,11 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                 onTap: () => context.push('/profile/password'),
               ),
               _Row(
+                icon: Icons.help_outline_rounded,
+                title: 'Help & Support',
+                onTap: () => context.push('/help'),
+              ),
+              _Row(
                 icon: Icons.description_outlined,
                 title: 'Terms & Condition',
                 onTap: () => context.push('/terms'),
@@ -253,6 +258,13 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
             ]),
             const SizedBox(height: 18),
             _Card(children: [
+              _Row(
+                icon: Icons.delete_outline_rounded,
+                title: 'Delete account',
+                danger: true,
+                chevron: false,
+                onTap: () => context.push('/profile/delete'),
+              ),
               _Row(
                 icon: Icons.logout_rounded,
                 title: 'Logout',

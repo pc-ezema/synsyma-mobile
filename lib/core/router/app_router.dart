@@ -17,6 +17,8 @@ import '../../features/profile/edit_profile_screen.dart';
 import '../../features/profile/terms_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/chat/chat_screen.dart';
+import '../../features/help/help_screen.dart';
+import '../../features/profile/delete_account_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -144,6 +146,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      GoRoute(path: '/help', builder: (_, __) => const HelpScreen()),
+      GoRoute(path: '/profile/delete', builder: (_, __) => const DeleteAccountScreen()),
     ],
   );
 });
