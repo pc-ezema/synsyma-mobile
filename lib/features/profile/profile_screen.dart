@@ -12,6 +12,7 @@ import '../home/main_tab.dart';
 import 'profile_controller.dart';
 import 'user_profile.dart';
 import '../../core/config/env.dart';
+import '../push/push_debug.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -254,6 +255,12 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                 icon: Icons.description_outlined,
                 title: 'Terms & Condition',
                 onTap: () => context.push('/terms'),
+              ),
+              if (Env.name != 'prod')
+              _Row(
+                icon: Icons.bug_report_outlined,
+                title: 'Push debug',
+                onTap: () => showPushDebug(context),
               ),
             ]),
             const SizedBox(height: 18),

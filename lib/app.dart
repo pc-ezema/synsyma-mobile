@@ -6,6 +6,8 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/push/push_service.dart';
 
+const kTextBoost = 1.2;
+
 class SynsymaApp extends ConsumerStatefulWidget {
   const SynsymaApp({super.key});
 
@@ -29,12 +31,21 @@ class _SynsymaAppState extends ConsumerState<SynsymaApp> {
       }
     });
 
-    return MaterialApp.router(
+     return MaterialApp.router(
       title: 'Synsyma',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       scaffoldMessengerKey: rootMessengerKey,
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        // Keep the phone's own font setting, add the boost, cap it so layouts don't break.
+        final scale = (mq.textScaler.scale(1) * kTextBoost).clamp(kTextBoost, 1.4);
+        return MediaQuery(
+          data: mq.copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        );
+      },
     );
   }
 }

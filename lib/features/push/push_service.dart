@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,19 @@ import '../home/main_tab.dart';
 
 /// Lets us show a banner from outside any screen.
 final rootMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
+/// Step-by-step record of the last push registration, shown on the Push debug screen.
+/// A plain ValueNotifier so it works with any Riverpod version.
+final ValueNotifier<List<String>> pushDebugLog = ValueNotifier<List<String>>(['Not started yet']);
+
+void _log(String line) {
+  final t = DateTime.now();
+  String two(int n) => n.toString().padLeft(2, '0');
+  final stamp = '${two(t.hour)}:${two(t.minute)}:${two(t.second)}';
+  final next = [...pushDebugLog.value.where((l) => l != 'Not started yet'), '$stamp  $line'];
+  pushDebugLog.value = next.length > 40 ? next.sublist(next.length - 40) : next;
+  debugPrint('[PUSH] $line');
+}
 
 final pushServiceProvider = Provider((ref) => PushService(ref));
 
@@ -31,6 +45,7 @@ class PushService {
     _started = true;
     try {
       final messaging = FirebaseMessaging.instance;
+      _log('Firebase Messaging is available');
 
       FirebaseMessaging.onMessage.listen(_onForeground); // app is open
       FirebaseMessaging.onMessageOpenedApp.listen(_open); // tapped while app was in the background
@@ -38,26 +53,48 @@ class PushService {
       final initial = await messaging.getInitialMessage(); // tapped while app was closed
       if (initial != null) _open(initial);
 
-      messaging.onTokenRefresh.listen((token) {
-        if (_ref.read(authProvider).status == AuthStatus.signedIn) _send(token);
+      messaging.onTokenRefresh.listen((token) async {
+        _log('Token refreshed');
+        if (_ref.read(authProvider).status != AuthStatus.signedIn) return;
+        try {
+          await _send(token);
+        } catch (e) {
+          _log('Send failed: $e');
+        }
       });
     } catch (e) {
-      debugPrint('Push init failed: $e');
+      _log('INIT FAILED: $e');
     }
   }
 
   /// Ask for permission, then tell the API which phone this is. Called after sign-in.
   Future<void> registerDevice() async {
-    if (!supported) return;
+    if (!supported) {
+      _log('Skipped: this platform does not support push');
+      return;
+    }
     try {
+      _log('Registering this phone...');
       final messaging = FirebaseMessaging.instance;
+
       final settings = await messaging.requestPermission();
-      if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+      _log('Notification permission: ${settings.authorizationStatus.name}');
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        _log('STOPPED: notifications are off for this app. Turn them on in phone Settings > Apps > Synsyma > Notifications.');
+        return;
+      }
 
       final token = await messaging.getToken();
-      if (token != null) await _send(token);
+      if (token == null) {
+        _log("STOPPED: Firebase returned no token (check google-services.json and Google Play services on the phone)");
+        return;
+      }
+      _log('Got a token: ${token.substring(0, token.length < 14 ? token.length : 14)}...');
+
+      await _send(token);
+      _log('DONE: the server accepted this phone');
     } catch (e) {
-      debugPrint('Push registration failed: $e');
+      _log('REGISTRATION FAILED: $e');
     }
   }
 
@@ -69,12 +106,14 @@ class PushService {
       if (token == null) return;
       await _ref.read(dioProvider).delete('/devices', data: {'token': token});
       _registeredToken = null;
+      _log('Phone removed from the server');
     } catch (e) {
-      debugPrint('Push unregister failed: $e');
+      _log('Unregister failed: $e');
     }
   }
 
   Future<void> _send(String token) async {
+    _log('Sending the token to the server (POST /devices)...');
     await _ref.read(dioProvider).post('/devices', data: {
       'token': token,
       'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
@@ -93,6 +132,7 @@ class PushService {
   }
 
   void _onForeground(RemoteMessage message) {
+    _log('A push arrived while the app is open (type: ${message.data['type']})');
     if (message.data['type'] != 'chat') return;
     if (_ref.read(mainTabProvider) == 2) return; // already looking at the chat
 

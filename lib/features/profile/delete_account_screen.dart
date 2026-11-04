@@ -10,6 +10,7 @@ import '../../core/network/api_error.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/sub_page.dart';
 import '../auth/auth_controller.dart';
+import '../auth/biometric_login.dart';
 import '../home/main_tab.dart';
 import '../../core/network/api_client.dart';
 
@@ -114,12 +115,13 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     setState(() => _busy = true);
     try {
       final Dio dio = ref.read(dioProvider);
-      await dio.delete('/users/account', data: {
+      await dio.delete('/account', data: {
         'password': _password.text,
         'reason': _reason,
         'comment': _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         'platform': _platform,
       });
+      await ref.read(biometricLoginProvider).disable(); // forget the saved fingerprint login
       ref.invalidate(mainTabProvider);
       await ref.read(authProvider.notifier).logout(); // the router sends them to /login
     } on ApiError catch (e) {

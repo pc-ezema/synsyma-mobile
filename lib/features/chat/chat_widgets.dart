@@ -159,7 +159,7 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback onDiscard;
   final VoidCallback onOpenImage;
 
-  static const _adminIndent = 62.0;
+  static const _adminIndent = 52.0;
   static const _imageSize = 200.0;
 
   @override

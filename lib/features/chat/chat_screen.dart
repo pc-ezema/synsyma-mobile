@@ -47,6 +47,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     _thread.setActive(state == AppLifecycleState.resumed);
   }
 
+
   void _onScroll() {
     if (!_scroll.hasClients) return;
     final p = _scroll.position;
