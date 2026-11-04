@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
+import '../chat/chat_unread.dart';
 import '../profile/profile_screen.dart';
 import '../chat/chat_tab.dart';
 import 'home_tab.dart';
@@ -12,6 +13,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(mainTabProvider);
+    final chatUnread = ref.watch(chatUnreadProvider);
 
     return PopScope(
       canPop: tab == 0, // back from another tab returns to Home first
@@ -39,6 +41,7 @@ class HomeScreen extends ConsumerWidget {
         bottomNavigationBar: AppBottomBar(
           index: tab,
           onSelect: ref.read(mainTabProvider.notifier).select,
+          chatUnread: chatUnread,
         ),
       ),
     );
@@ -46,10 +49,11 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class AppBottomBar extends StatelessWidget {
-  const AppBottomBar({super.key, required this.index, required this.onSelect});
+  const AppBottomBar({super.key, required this.index, required this.onSelect, this.chatUnread = 0});
 
   final int index;
   final ValueChanged<int> onSelect;
+  final int chatUnread; // unread messages from support, shown on the Chat tab
 
   static const _items = [
     (Icons.home_rounded, Icons.home_outlined, 'Home'),
@@ -97,6 +101,7 @@ class AppBottomBar extends StatelessWidget {
                             activeIcon: _items[i].$1,
                             icon: _items[i].$2,
                             label: _items[i].$3,
+                            badge: i == 2 ? chatUnread : 0,
                             onTap: () => onSelect(i),
                           ),
                         ),
@@ -119,12 +124,14 @@ class _NavItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.badge = 0,
   });
 
   final bool active;
   final IconData activeIcon;
   final IconData icon;
   final String label;
+  final int badge;
   final VoidCallback onTap;
 
   @override
@@ -132,16 +139,41 @@ class _NavItem extends StatelessWidget {
     return Semantics(
       button: true,
       selected: active,
-      label: label,
+      label: badge > 0 ? '$label, $badge unread' : label,
       child: InkWell(
         onTap: onTap,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              active ? activeIcon : icon,
-              size: 26,
-              color: active ? AppColors.blueDark : const Color(0xFF8394BC),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  active ? activeIcon : icon,
+                  size: 26,
+                  color: active ? AppColors.blueDark : const Color(0xFF8394BC),
+                ),
+                if (badge > 0)
+                  Positioned(
+                    right: -9,
+                    top: -5,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                      child: Text(
+                        badge > 9 ? '9+' : '$badge',
+                        textScaler: TextScaler.noScaling, // stays small even with the text boost
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, height: 1),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             if (active)
               Padding(

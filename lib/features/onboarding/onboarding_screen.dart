@@ -79,7 +79,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 builder: (context, c) {
                   // Carousel height scales down on short screens.
                   // Space left for the carousel after the buttons (84) and text + indicator (~170).
-                  final h = (c.maxHeight - 84 - 170).clamp(240.0, 400.0);
+                  // The text block grows with the text size, so nothing overlaps the page indicator.
+                  final textScale = MediaQuery.textScalerOf(context).scale(1);
+                  final textH = 130 * textScale;
+                  final h = (c.maxHeight - 84 - textH - 50).clamp(240.0, 400.0);
                   final overflow = h * (78 / 397); // how far the head pops above the card
 
                   return Column(
@@ -104,7 +107,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ),
                       const SizedBox(height: 22),
                       SizedBox(
-                        height: 120,
+                        height: textH,
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 250),
                           child: Padding(

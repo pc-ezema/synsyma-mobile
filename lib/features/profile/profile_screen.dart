@@ -256,7 +256,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                 title: 'Terms & Condition',
                 onTap: () => context.push('/terms'),
               ),
-              if (Env.name != 'prod')
+              if (Env.name == 'local')
               _Row(
                 icon: Icons.bug_report_outlined,
                 title: 'Push debug',
