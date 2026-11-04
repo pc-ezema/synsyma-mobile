@@ -19,6 +19,9 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/chat/chat_screen.dart';
 import '../../features/help/help_screen.dart';
 import '../../features/profile/delete_account_screen.dart';
+import '../../features/catalog/categories_screen.dart';
+import '../../features/catalog/category_services_screen.dart';
+import '../../features/catalog/service_detail_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -114,6 +117,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Signed-in area
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+      GoRoute(path: '/categories', builder: (_, __) => const CategoriesScreen()),
+      GoRoute(path: '/categories/:slug', builder: (_, s) => CategoryServicesScreen(slug: s.pathParameters['slug']!)),
+  GoRoute(path: '/service/:id', builder: (_, s) => ServiceDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/chat', builder: (_, __) => const ChatScreen()),
       GoRoute(
         path: '/profile/edit/:field',

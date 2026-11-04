@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/sub_page.dart';
 import '../../core/widgets/user_avatar.dart';
+import '../catalog/category_strip.dart';
 import '../profile/profile_controller.dart';
 import '../profile/user_profile.dart';
 import 'main_tab.dart';
@@ -53,7 +55,7 @@ class HomeTab extends ConsumerWidget {
                     label: 'Search services',
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      onTap: () => showToast(context, 'Search will work once services are added.'),
+                      onTap: () => context.push('/categories'),
                       child: Container(
                         height: 50,
                         padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -76,12 +78,19 @@ class HomeTab extends ConsumerWidget {
                 const SizedBox(width: 8),
                 IconButton(
                   tooltip: 'Filter',
-                  onPressed: () => showToast(context, 'Filters will work once services are added.'),
+                  onPressed: () => context.push('/categories'),
                   icon: const Icon(Icons.filter_alt_rounded, size: 28, color: AppColors.navy),
                 ),
               ],
             ),
-            // Categories, Most Booked and the offer banner come next.
+            const SizedBox(height: 22),
+            const Text(
+              'Category',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black),
+            ),
+            const SizedBox(height: 10),
+            const CategoryStrip(),
+            // Most Booked and the offer banner come next.
           ],
         ),
       ),
