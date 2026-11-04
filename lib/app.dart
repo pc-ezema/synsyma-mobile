@@ -6,7 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/push/push_service.dart';
 
-const kTextBoost = 1.2;
+const kTextBoost = 1.15;
 
 class SynsymaApp extends ConsumerStatefulWidget {
   const SynsymaApp({super.key});
