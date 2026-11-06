@@ -16,13 +16,13 @@ class _Slide {
 
 const _slides = [
   _Slide(
-    'Synsyma Is Your No 1 HR Software For Domestic Workers In Nigeria.',
-    'Effortlessly connecting employers to home service providers based on availability, proximity and specialization.',
+    'Welcome to Synsyma',
+    'Connecting you to home service professionals based of proximity, availability and specialization.',
     'assets/images/onboarding_1.png',
   ),
   _Slide(
     'Book A Service',
-    'Be rest assured, any new hire sent to your home has successfully passed both safety and security requirements of Synsyma',
+    'Every professional on Synsyma is carefully screened and verified, giving you peace of mind with every service you book.',
     'assets/images/onboarding_2.png',
   ),
   _Slide(

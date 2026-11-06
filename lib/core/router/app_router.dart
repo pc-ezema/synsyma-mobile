@@ -22,6 +22,11 @@ import '../../features/profile/delete_account_screen.dart';
 import '../../features/catalog/categories_screen.dart';
 import '../../features/catalog/category_services_screen.dart';
 import '../../features/catalog/service_detail_screen.dart';
+import '../../features/booking/book_service_screen.dart';
+import '../../features/booking/addresses_screen.dart';
+import '../../features/booking/address_form_screen.dart';
+import '../../features/booking/booking_detail_screen.dart';
+import '../../features/booking/booking_models.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -119,7 +124,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
       GoRoute(path: '/categories', builder: (_, __) => const CategoriesScreen()),
       GoRoute(path: '/categories/:slug', builder: (_, s) => CategoryServicesScreen(slug: s.pathParameters['slug']!)),
-  GoRoute(path: '/service/:id', builder: (_, s) => ServiceDetailScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/service/:id', builder: (_, s) => ServiceDetailScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/addresses', builder: (_, state) => AddressesScreen(selectMode: state.uri.queryParameters['select'] == '1')),
+      GoRoute(path: '/addresses/form', builder: (_, state) => AddressFormScreen(existing: state.extra as SavedAddress?)),
+      GoRoute(path: '/book/:id', builder: (_, state) => BookServiceScreen(id: state.pathParameters['id']!)),
+      GoRoute(path: '/bookings/:id', builder: (_, state) => BookingDetailScreen(id: state.pathParameters['id']!)),
       GoRoute(path: '/chat', builder: (_, __) => const ChatScreen()),
       GoRoute(
         path: '/profile/edit/:field',

@@ -6,6 +6,7 @@ import '../profile/profile_screen.dart';
 import '../chat/chat_tab.dart';
 import 'home_tab.dart';
 import 'main_tab.dart';
+import '../booking/bookings_tab.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -28,11 +29,7 @@ class HomeScreen extends ConsumerWidget {
             index: tab,
             children: const [
               HomeTab(),
-              _ComingSoon(
-                icon: Icons.event_available_outlined,
-                title: 'Bookings',
-                message: 'Your booked services will show up here.',
-              ),
+              BookingsTab(),
               ChatTab(),
               ProfileScreen(),
             ],

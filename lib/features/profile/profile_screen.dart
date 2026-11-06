@@ -247,6 +247,11 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                 onTap: () => context.push('/profile/password'),
               ),
               _Row(
+                icon: Icons.location_on_outlined,
+                title: 'My addresses',
+                onTap: () => context.push('/addresses'),
+              ),
+              _Row(
                 icon: Icons.help_outline_rounded,
                 title: 'Help & Support',
                 onTap: () => context.push('/help'),

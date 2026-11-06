@@ -129,7 +129,7 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
               height: 54,
               child: FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: AppColors.blueDark, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                onPressed: () => _bookNow(s, selected),
+                onPressed: selected.id.isEmpty ? null : () => context.push('/book/${selected.id}'),
                 child: const Text('Book Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
@@ -144,49 +144,6 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
     context.go('/home');
   }
 
-  /// There is no booking flow yet. This tells the customer so, and takes them to the chat to book now.
-  void _bookNow(ServiceCard s, ServiceOption o) {
-    final label = o.tierLabel == null ? s.name : '${s.name} (${o.tierLabel})';
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 22, 24, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy)),
-              const SizedBox(height: 4),
-              Text(o.priceLabel, style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280))),
-              const SizedBox(height: 14),
-              const Text(
-                'Online booking is opening soon. Message us now and our team will book this for you.',
-                style: TextStyle(fontSize: 14, height: 1.5, color: Color(0xFF6B7280)),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.blueDark, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                  onPressed: () {
-                    Navigator.of(sheet).pop();
-                    _openChat();
-                  },
-                  child: const Text('Chat with us'),
-                ),
-              ),
-              const SizedBox(height: 6),
-              SizedBox(width: double.infinity, child: TextButton(onPressed: () => Navigator.of(sheet).pop(), child: const Text('Not now'))),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _Hero extends StatelessWidget {
