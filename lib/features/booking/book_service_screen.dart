@@ -288,7 +288,7 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
       ),
       if (_error != null) Padding(padding: const EdgeInsets.only(top: 14), child: Text(_error!, style: const TextStyle(color: AppColors.danger, fontSize: 13.5))),
       const SizedBox(height: 22),
-      PrimaryButton(label: isQuote ? 'Request a quote' : 'Confirm booking', busy: _busy, onPressed: ready ? () => _confirm(option, address!, isQuote) : null),
+      PrimaryButton(label: isQuote ? 'Request a quote' : 'Confirm booking', busy: _busy, onPressed: ready ? () => _confirm(option, address, isQuote) : null),
       const SizedBox(height: 8),
       Text(
         !ready ? 'Choose an address and a start time to continue.' : isQuote ? 'Our team will reply with a price.' : 'You will pay securely with Stripe on the next step.',

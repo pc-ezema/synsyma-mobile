@@ -91,7 +91,8 @@ class _BookingsTabState extends ConsumerState<BookingsTab> {
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
-              await ref.refresh(bookingsProvider(_scope).future);
+              ref.invalidate(bookingsProvider(_scope));
+              await ref.read(bookingsProvider(_scope).future);
             },
             child: async.isLoading && page == null
                 ? ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())])
