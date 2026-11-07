@@ -106,6 +106,60 @@ class PricePreview {
       );
 }
 
+/// What cancelling would cost, from the server's policy.
+class CancelQuote {
+  const CancelQuote({required this.allowed, required this.currency, required this.paid, required this.fee, required this.refund, required this.message});
+  final bool allowed;
+  final String currency;
+  final double paid;
+  final double fee;
+  final double refund;
+  final String message;
+
+  factory CancelQuote.fromJson(Map<String, dynamic> j) => CancelQuote(
+        allowed: j['allowed'] == true,
+        currency: (j['currency'] as String?) ?? 'USD',
+        paid: _d(j['paid']),
+        fee: _d(j['fee']),
+        refund: _d(j['refund']),
+        message: (j['message'] as String?) ?? '',
+      );
+}
+
+/// What the customer may change right now, from the server's policy.
+class BookingOptions {
+  const BookingOptions({
+    required this.canReschedule,
+    required this.rescheduleMessage,
+    required this.canAddHours,
+    required this.maxMoreHours,
+    required this.pricePerHour,
+    required this.currency,
+    required this.hoursMessage,
+  });
+  final bool canReschedule;
+  final String rescheduleMessage;
+  final bool canAddHours;
+  final int maxMoreHours;
+  final double pricePerHour;
+  final String currency;
+  final String hoursMessage;
+
+  factory BookingOptions.fromJson(Map<String, dynamic> j) {
+    final r = j['reschedule'] is Map ? Map<String, dynamic>.from(j['reschedule'] as Map) : <String, dynamic>{};
+    final h = j['extra_hours'] is Map ? Map<String, dynamic>.from(j['extra_hours'] as Map) : <String, dynamic>{};
+    return BookingOptions(
+      canReschedule: r['allowed'] == true,
+      rescheduleMessage: (r['message'] as String?) ?? '',
+      canAddHours: h['allowed'] == true,
+      maxMoreHours: (h['max_more'] as num?)?.toInt() ?? 0,
+      pricePerHour: _d(h['price_per_hour']),
+      currency: (h['currency'] as String?) ?? 'USD',
+      hoursMessage: (h['message'] as String?) ?? '',
+    );
+  }
+}
+
 class BookingEvent {
   const BookingEvent({required this.type, this.toStatus, this.note, this.createdAt});
   final String type;
@@ -122,9 +176,10 @@ class BookingEvent {
 }
 
 class BookingPayment {
-  const BookingPayment({required this.status, required this.amount, this.cardBrand, this.cardLast4, this.paidAt});
+  const BookingPayment({required this.status, required this.amount, this.refunded = 0, this.cardBrand, this.cardLast4, this.paidAt});
   final String status; // requires_payment | succeeded | failed | refunded | partially_refunded
   final double amount;
+  final double refunded;
   final String? cardBrand;
   final String? cardLast4;
   final DateTime? paidAt;
@@ -132,6 +187,7 @@ class BookingPayment {
   bool get isPaid => const ['succeeded', 'refunded', 'partially_refunded'].contains(status);
 
   String get cardLabel {
+    if (cardBrand == 'paypal') return 'PayPal';
     if ((cardLast4 ?? '').isEmpty) return 'Card';
     final b = (cardBrand ?? '').isEmpty ? 'Card' : '${cardBrand![0].toUpperCase()}${cardBrand!.substring(1)}';
     return '$b •••• $cardLast4';
@@ -140,6 +196,7 @@ class BookingPayment {
   factory BookingPayment.fromJson(Map<String, dynamic> j) => BookingPayment(
         status: (j['status'] as String?) ?? 'requires_payment',
         amount: _d(j['amount']),
+        refunded: _d(j['refunded_total']),
         cardBrand: j['card_brand'] as String?,
         cardLast4: j['card_last4'] as String?,
         paidAt: DateTime.tryParse((j['paid_at'] as String?) ?? '')?.toLocal(),
@@ -173,6 +230,8 @@ class Booking {
     this.imageUrl,
     this.includedHours,
     this.payment,
+    this.extraHours = 0,
+    this.rescheduleCount = 0,
     this.events = const [],
   });
 
@@ -201,14 +260,21 @@ class Booking {
   final String? imageUrl;
   final int? includedHours;
   final BookingPayment? payment;
+  final int extraHours; // paid hours added after booking
+  final int rescheduleCount;
   final List<BookingEvent> events;
 
   bool get isQuote => priceType == 'quote';
+  bool get canCancel => const ['pending_payment', 'confirmed', 'assigned'].contains(status);
   bool get needsPayment => status == 'pending_payment' && !isQuote && total > 0;
   bool get isDone => const ['completed', 'cancelled', 'refunded'].contains(status);
   String get title => tier == null || tier!.isEmpty ? serviceName : '$serviceName (${tier![0].toUpperCase()}${tier!.substring(1)})';
   String get shortAddress => '$addressLine1, $city';
-  String get durationLabel => priceType == 'hourly' && includedHours != null ? '$includedHours ${includedHours == 1 ? 'hour' : 'hours'}' : 'Per visit';
+  String get durationLabel {
+    if (priceType != 'hourly' || includedHours == null) return 'Per visit';
+    final n = includedHours! + extraHours;
+    return '$n ${n == 1 ? 'hour' : 'hours'}${extraHours > 0 ? ' (incl. $extraHours extra)' : ''}';
+  }
   String get address => [addressLine1, addressLine2, city, region, postalCode].where((e) => (e ?? '').trim().isNotEmpty).join(', ');
 
   factory Booking.fromJson(Map<String, dynamic> j) => Booking(
@@ -236,6 +302,8 @@ class Booking {
         contractorName: j['contractor_name'] as String?,
         imageUrl: j['image_url'] as String?,
         includedHours: (j['included_hours'] as num?)?.toInt(),
+        extraHours: (j['extra_hours'] as num?)?.toInt() ?? 0,
+        rescheduleCount: (j['reschedule_count'] as num?)?.toInt() ?? 0,
         payment: j['payment'] is Map ? BookingPayment.fromJson(Map<String, dynamic>.from(j['payment'] as Map)) : null,
         events: ((j['events'] as List?) ?? const [])
             .map((e) => BookingEvent.fromJson(Map<String, dynamic>.from(e as Map)))

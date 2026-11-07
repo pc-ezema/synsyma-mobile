@@ -64,14 +64,38 @@ class BookingRepository {
     }
   }
 
-  /// mode: 'sheet' (phone) or 'checkout' (web). Returns the data the payment step needs.
-  Future<Map<String, dynamic>> startPayment(String id, {required String mode, String? returnUrl}) async {
-    final data = await _call('POST', '/users/bookings/$id/pay', data: {'mode': mode, if (returnUrl != null) 'return_url': returnUrl});
+  /// mode: 'sheet' / 'checkout' (card) or 'redirect' (PayPal). provider: 'stripe' or 'paypal'.
+  /// extraHours: pay for extra hours on the booking instead of the booking itself.
+  Future<Map<String, dynamic>> startPayment(String id, {required String mode, String provider = 'stripe', String? returnUrl, int? extraHours}) async {
+    final data = await _call('POST', '/users/bookings/$id/pay', data: {
+      'provider': provider,
+      'mode': mode,
+      if (returnUrl != null) 'return_url': returnUrl,
+      if (extraHours != null) 'extra_hours': extraHours,
+    });
     return _map(data);
+  }
+
+  /// Which ways to pay are switched on: 'card', 'paypal'.
+  Future<List<String>> paymentMethods() async {
+    final data = await _call('GET', '/users/payment-methods');
+    return (data is List ? data : const []).map((e) => _map(e)['id'] as String).toList();
   }
 
   /// Asks the server to check with Stripe, so the screen is right even before the webhook lands.
   Future<Booking> syncPayment(String id) async => Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/pay/sync')));
+
+  Future<CancelQuote> cancelPreview(String id) async =>
+      CancelQuote.fromJson(_map(await _call('GET', '/users/bookings/$id/cancel-preview')));
+
+  Future<Booking> cancelBooking(String id) async =>
+      Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/cancel')));
+
+  Future<Booking> reschedule(String id, DateTime startsAt) async =>
+      Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/reschedule', data: {'starts_at': isoWithOffset(startsAt)})));
+
+  Future<BookingOptions> options(String id) async =>
+      BookingOptions.fromJson(_map(await _call('GET', '/users/bookings/$id/options')));
 
   Future<Booking> booking(String id) async => Booking.fromJson(_map(await _call('GET', '/users/bookings/$id')));
 }
@@ -82,6 +106,10 @@ final addressesProvider = FutureProvider.autoDispose<List<SavedAddress>>((ref) =
 final bookingsProvider = FutureProvider.autoDispose.family<BookingPage, String>((ref, scope) => ref.watch(bookingRepositoryProvider).bookings(scope));
 
 final bookingProvider = FutureProvider.autoDispose.family<Booking, String>((ref, id) => ref.watch(bookingRepositoryProvider).booking(id));
+
+final bookingOptionsProvider = FutureProvider.autoDispose.family<BookingOptions, String>(
+  (ref, id) => ref.watch(bookingRepositoryProvider).options(id),
+);
 
 typedef PreviewKey = ({String serviceId, String? addressId});
 

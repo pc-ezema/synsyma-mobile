@@ -55,15 +55,40 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     super.dispose();
   }
 
-  InputDecoration _deco(String label, {String? error, String? hint}) => InputDecoration(
-        labelText: label,
+  // Same compact look as the Chat search and the password screens: 14px text, label above the box.
+  InputDecoration _deco({String? hint, String? error}) => InputDecoration(
         hintText: hint,
+        hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF9EA3B0)),
         errorText: error,
+        errorStyle: const TextStyle(fontSize: 12, color: AppColors.danger),
+        counterText: '',
+        isDense: true,
         filled: true,
         fillColor: AppColors.authBg,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.fieldBorder)),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.fieldBorder)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.blueDark, width: 1.6)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.danger)),
+        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.danger, width: 1.6)),
+      );
+
+  static const _text = TextStyle(fontSize: 14, color: AppColors.navy);
+
+  Widget _labeled(String label, Widget child) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.navy)),
+          const SizedBox(height: 8),
+          child,
+        ]),
+      );
+
+  Widget _field(String label, TextEditingController c,
+          {String? hint, String? error, TextCapitalization caps = TextCapitalization.none, int? maxLength, int maxLines = 1}) =>
+      _labeled(
+        label,
+        TextField(controller: c, style: _text, textCapitalization: caps, maxLength: maxLength, maxLines: maxLines, decoration: _deco(hint: hint, error: error)),
       );
 
   bool _validate() {
@@ -109,43 +134,40 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     return SubPageScaffold(
       title: widget.existing == null ? 'Add address' : 'Edit address',
       children: [
-        TextField(controller: _label, maxLength: 40, decoration: _deco('Label (optional)', hint: 'Home, Office...').copyWith(counterText: '')),
-        const SizedBox(height: 14),
-        DropdownButtonFormField<String>(
-          // ignore: deprecated_member_use
-          value: _country,
-          decoration: _deco('Country'),
-          items: [for (final e in countryNames.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
-          onChanged: (v) => setState(() {
-            _country = v ?? _country;
-            _region = null;
-          }),
+        _field('Label (optional)', _label, hint: 'Home, Office...', maxLength: 40),
+        _labeled(
+          'Country',
+          DropdownButtonFormField<String>(
+            // ignore: deprecated_member_use
+            value: _country,
+            isExpanded: true,
+            style: _text,
+            decoration: _deco(),
+            items: [for (final e in countryNames.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+            onChanged: (v) => setState(() {
+              _country = v ?? _country;
+              _region = null;
+            }),
+          ),
         ),
-        const SizedBox(height: 14),
-        TextField(controller: _line1, textCapitalization: TextCapitalization.words, decoration: _deco('Street address', error: _errors['line1'])),
-        const SizedBox(height: 14),
-        TextField(controller: _line2, textCapitalization: TextCapitalization.words, decoration: _deco('Apartment, suite, unit (optional)')),
-        const SizedBox(height: 14),
-        TextField(controller: _city, textCapitalization: TextCapitalization.words, decoration: _deco('City', error: _errors['city'])),
-        const SizedBox(height: 14),
-        DropdownButtonFormField<String>(
-          key: ValueKey(_country),
-          // ignore: deprecated_member_use
-          value: _region,
-          isExpanded: true,
-          decoration: _deco(regionLabel[_country]!, error: _errors['region']),
-          items: [for (final r in regions) DropdownMenuItem(value: r, child: Text(r))],
-          onChanged: (v) => setState(() => _region = v),
+        _field('Street address', _line1, hint: 'Enter street address', caps: TextCapitalization.words, error: _errors['line1']),
+        _field('Apartment, suite, unit (optional)', _line2, hint: 'Apt, suite, unit', caps: TextCapitalization.words),
+        _field('City', _city, hint: 'Enter city', caps: TextCapitalization.words, error: _errors['city']),
+        _labeled(
+          regionLabel[_country]!,
+          DropdownButtonFormField<String>(
+            key: ValueKey(_country),
+            // ignore: deprecated_member_use
+            value: _region,
+            isExpanded: true,
+            style: _text,
+            decoration: _deco(hint: 'Select', error: _errors['region']),
+            items: [for (final r in regions) DropdownMenuItem(value: r, child: Text(r))],
+            onChanged: (v) => setState(() => _region = v),
+          ),
         ),
-        const SizedBox(height: 14),
-        TextField(controller: _postal, textCapitalization: TextCapitalization.characters, decoration: _deco(postalLabel[_country]!, error: _errors['postal'])),
-        const SizedBox(height: 14),
-        TextField(
-          controller: _instructions,
-          maxLength: 300,
-          maxLines: 2,
-          decoration: _deco('Access notes (optional)', hint: 'Gate code, which door, parking...'),
-        ),
+        _field(postalLabel[_country]!, _postal, hint: 'Enter ${postalLabel[_country]!.toLowerCase()}', caps: TextCapitalization.characters, error: _errors['postal']),
+        _field('Access notes (optional)', _instructions, hint: 'Gate code, which door, parking...', maxLength: 300, maxLines: 2),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           value: _default,

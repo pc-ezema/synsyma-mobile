@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/network/api_error.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/sub_page.dart';
 import '../home/main_tab.dart';
@@ -8,6 +9,8 @@ import 'booking_models.dart';
 import 'payment_flow.dart';
 import 'booking_repository.dart';
 import 'booking_widgets.dart';
+import 'extra_hours_sheet.dart';
+import 'reschedule_screen.dart';
 
 /// One booking. Route: /bookings/:id
 class BookingDetailScreen extends ConsumerStatefulWidget {
@@ -29,17 +32,18 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     context.go('/home');
   }
 
-  /// If the booking is still unpaid when we open it (for example we just came back from Stripe's page),
-  /// ask the server to check with Stripe once.
+  /// When we open an active booking (for example we just came back from Stripe's or PayPal's page),
+  /// ask the server to check with the gateways once.
   Future<void> _syncOnce(Booking b) async {
-    if (_synced || b.status != 'pending_payment' || b.isQuote) return;
+    if (_synced || b.isDone || b.isQuote) return;
     _synced = true;
     try {
       final fresh = await ref.read(bookingRepositoryProvider).syncPayment(id);
-      if (fresh.status != b.status) {
+      if (fresh.status != b.status || fresh.extraHours != b.extraHours) {
         ref.invalidate(bookingProvider(id));
+        ref.invalidate(bookingOptionsProvider(id));
         refreshBookings(ref);
-        if (mounted) showToast(context, 'Payment received. Your booking is confirmed.');
+        if (mounted) showToast(context, fresh.extraHours != b.extraHours ? 'Extra hours added.' : 'Payment received. Your booking is confirmed.');
       }
     } catch (_) {
       // not critical: the Pay button is still there
@@ -48,8 +52,11 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 
   Future<void> _pay() async {
     if (_paying) return;
+    final repo = ref.read(bookingRepositoryProvider);
+    final method = await choosePayMethod(context, repo);
+    if (method == null || !mounted) return;
     setState(() => _paying = true);
-    final out = await payForBooking(ref.read(bookingRepositoryProvider), id);
+    final out = await payForBooking(repo, id, method: method);
     if (!mounted) return;
     setState(() => _paying = false);
     switch (out.result) {
@@ -65,12 +72,129 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     }
   }
 
+  void _changed() {
+    ref.invalidate(bookingProvider(id));
+    ref.invalidate(bookingOptionsProvider(id));
+    refreshBookings(ref);
+  }
+
+  Future<void> _reschedule(Booking b, BookingOptions? o) async {
+    if (o == null) return;
+    if (!o.canReschedule) {
+      showToast(context, o.rescheduleMessage);
+      return;
+    }
+    final moved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => RescheduleScreen(booking: b, note: o.rescheduleMessage)),
+    );
+    if (moved == true) _changed();
+  }
+
+  Future<void> _addHours(Booking b, BookingOptions o) async {
+    final hours = await pickExtraHours(context, o);
+    if (hours == null || !mounted) return;
+    final repo = ref.read(bookingRepositoryProvider);
+    final method = await choosePayMethod(context, repo);
+    if (method == null || !mounted) return;
+
+    setState(() => _paying = true);
+    final out = await payForBooking(repo, id, method: method, extraHours: hours, extraHoursBefore: b.extraHours);
+    if (!mounted) return;
+    setState(() => _paying = false);
+    switch (out.result) {
+      case PayResult.paid:
+        _changed();
+        showToast(context, 'Extra hours added.');
+      case PayResult.failed:
+        showToast(context, out.message ?? 'The payment could not be completed.');
+      case PayResult.cancelled:
+      case PayResult.redirected:
+        break;
+    }
+  }
+
+  Future<void> _cancel() async {
+    final repo = ref.read(bookingRepositoryProvider);
+    CancelQuote q;
+    try {
+      q = await repo.cancelPreview(id);
+    } on ApiError catch (e) {
+      if (mounted) showToast(context, e.message);
+      return;
+    }
+    if (!mounted) return;
+    if (!q.allowed) {
+      showToast(context, q.message);
+      return;
+    }
+    final yes = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.white,
+      constraints: const BoxConstraints(maxWidth: 480),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Cancel this booking?', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black)),
+            const SizedBox(height: 12),
+            Text(q.message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF4A4E5A))),
+            const SizedBox(height: 28),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    foregroundColor: AppColors.blueDark,
+                    side: const BorderSide(color: AppColors.blueDark),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  child: const Text('No, keep it'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    backgroundColor: AppColors.danger,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  child: const Text('Yes, cancel'),
+                ),
+              ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+    if (yes != true || !mounted) return;
+
+    setState(() => _paying = true);
+    try {
+      await repo.cancelBooking(id);
+      ref.invalidate(bookingProvider(id));
+      refreshBookings(ref);
+      if (mounted) showToast(context, q.refund > 0 ? 'Booking cancelled. Your refund is on its way.' : 'Booking cancelled.');
+    } on ApiError catch (e) {
+      if (mounted) showToast(context, e.message);
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ref = this.ref;
     final async = ref.watch(bookingProvider(id));
     final b = async.value;
     if (b != null) WidgetsBinding.instance.addPostFrameCallback((_) => _syncOnce(b));
+    final opts = b == null ? null : ref.watch(bookingOptionsProvider(id)).value;
 
     return SubPageScaffold(
       title: 'Booking details',
@@ -105,13 +229,33 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             ]),
             const SizedBox(height: 14),
           ],
-          b.needsPayment
+          if (opts != null && opts.canAddHours) ...[
+            PrimaryButton(label: 'Add extra hours', busy: _paying, onPressed: () => _addHours(b, opts)),
+            const SizedBox(height: 14),
+          ],
+          b.needsPayment || (opts != null && opts.canAddHours)
               ? OutlinedButton(
                   style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50), foregroundColor: AppColors.blueDark, side: const BorderSide(color: AppColors.blueDark), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                   onPressed: () => _openChat(context, ref),
                   child: const Text('Chat with us about this booking', style: TextStyle(fontWeight: FontWeight.w600)),
                 )
               : PrimaryButton(label: 'Chat with us about this booking', onPressed: () => _openChat(context, ref)),
+          if (b.canCancel) ...[
+            const SizedBox(height: 6),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              TextButton(
+                onPressed: _paying ? null : () => _reschedule(b, opts),
+                style: TextButton.styleFrom(foregroundColor: AppColors.blueDark),
+                child: const Text('Reschedule', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                onPressed: _paying ? null : _cancel,
+                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                child: const Text('Cancel booking', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+            ]),
+          ],
         ],
       ],
     );
@@ -176,6 +320,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     final payment = switch (b.status) {
       'quote_requested' || 'quote_sent' => 'Quote',
       'pending_payment' => 'Not paid yet',
+      _ when pay != null && pay.status == 'refunded' => 'Refunded ${money(pay.refunded, b.currency)}',
+      _ when pay != null && pay.status == 'partially_refunded' => 'Paid · ${money(pay.refunded, b.currency)} refunded',
       _ => pay != null && pay.isPaid ? 'Paid · ${pay.cardLabel}' : 'Paid',
     };
     return GlassCard(
@@ -232,11 +378,18 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                   padding: const EdgeInsets.only(bottom: 14),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(
-                      events[i].type == 'created' ? 'Booking created' : (events[i].toStatus != null ? statusText(events[i].toStatus!) : 'Update'),
+                      switch (events[i].type) {
+                        'created' => 'Booking created',
+                        'rescheduled' => 'Rescheduled',
+                        'extra_hours' => 'Extra hours added',
+                        _ => events[i].toStatus != null ? statusText(events[i].toStatus!) : 'Update',
+                      },
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),
                     ),
                     if (events[i].createdAt != null)
                       Text('${formatDay(events[i].createdAt!)} · ${formatTime(events[i].createdAt!)}', style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                    if ((events[i].type == 'rescheduled' || events[i].type == 'extra_hours') && (events[i].note ?? '').isNotEmpty)
+                      Padding(padding: const EdgeInsets.only(top: 2), child: Text(events[i].note!, style: const TextStyle(fontSize: 12, height: 1.35, color: Color(0xFF6B7280)))),
                   ]),
                 ),
               ),

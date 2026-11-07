@@ -119,7 +119,10 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
 
       // Straight on to payment. If they close it, the booking stays unpaid and shows a Pay button.
       if (!isQuote && b.needsPayment) {
-        final out = await payForBooking(ref.read(bookingRepositoryProvider), b.id);
+        final repo = ref.read(bookingRepositoryProvider);
+        final method = await choosePayMethod(context, repo);
+        if (!mounted) return;
+        final out = method == null ? const PayOutcome(PayResult.cancelled) : await payForBooking(repo, b.id, method: method);
         if (!mounted) return;
         if (out.result == PayResult.failed) showToast(context, out.message ?? 'The payment could not be completed.');
         if (out.result == PayResult.redirected) return; // the web page has left for Stripe
