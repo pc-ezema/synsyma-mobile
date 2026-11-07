@@ -85,6 +85,9 @@ class PricePreview {
     required this.tax,
     required this.total,
     this.includedHours,
+    this.promoCode,
+    this.promoLabel,
+    this.promoMessage,
   });
 
   final String currency;
@@ -94,6 +97,9 @@ class PricePreview {
   final double tax;
   final double total;
   final int? includedHours;
+  final String? promoCode; // set when a promo code was applied
+  final String? promoLabel; // e.g. "10% off"
+  final String? promoMessage; // the admin's message for the code
 
   factory PricePreview.fromJson(Map<String, dynamic> j) => PricePreview(
         currency: (j['currency'] as String?) ?? 'USD',
@@ -103,6 +109,9 @@ class PricePreview {
         tax: _d(j['tax_total']),
         total: _d(j['total']),
         includedHours: (j['included_hours'] as num?)?.toInt(),
+        promoCode: (j['promo'] as Map?)?['code'] as String?,
+        promoLabel: (j['promo'] as Map?)?['label'] as String?,
+        promoMessage: (j['promo'] as Map?)?['description'] as String?,
       );
 }
 
@@ -230,6 +239,7 @@ class Booking {
     this.imageUrl,
     this.includedHours,
     this.payment,
+    this.promoCode,
     this.extraHours = 0,
     this.rescheduleCount = 0,
     this.events = const [],
@@ -260,6 +270,7 @@ class Booking {
   final String? imageUrl;
   final int? includedHours;
   final BookingPayment? payment;
+  final String? promoCode;
   final int extraHours; // paid hours added after booking
   final int rescheduleCount;
   final List<BookingEvent> events;
@@ -305,6 +316,7 @@ class Booking {
         extraHours: (j['extra_hours'] as num?)?.toInt() ?? 0,
         rescheduleCount: (j['reschedule_count'] as num?)?.toInt() ?? 0,
         payment: j['payment'] is Map ? BookingPayment.fromJson(Map<String, dynamic>.from(j['payment'] as Map)) : null,
+        promoCode: j['promo_code'] as String?,
         events: ((j['events'] as List?) ?? const [])
             .map((e) => BookingEvent.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),

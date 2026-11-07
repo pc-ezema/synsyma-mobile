@@ -36,17 +36,23 @@ class BookingRepository {
   Future<void> deleteAddress(String id) => _call('DELETE', '/users/addresses/$id');
 
   // ---- bookings ----
-  Future<PricePreview> preview(String serviceId, String? addressId) async {
-    final data = await _call('POST', '/users/bookings/preview', data: {'service_id': serviceId, if (addressId != null) 'address_id': addressId});
+  /// promoCode: checked by the server. A bad code throws an ApiError with the reason.
+  Future<PricePreview> preview(String serviceId, String? addressId, {String? promoCode}) async {
+    final data = await _call('POST', '/users/bookings/preview', data: {
+      'service_id': serviceId,
+      if (addressId != null) 'address_id': addressId,
+      if (promoCode != null) 'promo_code': promoCode,
+    });
     return PricePreview.fromJson(_map(data));
   }
 
-  Future<Booking> createBooking({required String serviceId, required String addressId, required DateTime startsAt, String? notes}) async {
+  Future<Booking> createBooking({required String serviceId, required String addressId, required DateTime startsAt, String? notes, String? promoCode}) async {
     final data = await _call('POST', '/users/bookings', data: {
       'service_id': serviceId,
       'address_id': addressId,
       'starts_at': isoWithOffset(startsAt),
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      if (promoCode != null) 'promo_code': promoCode,
     });
     return Booking.fromJson(_map(data));
   }
@@ -111,10 +117,10 @@ final bookingOptionsProvider = FutureProvider.autoDispose.family<BookingOptions,
   (ref, id) => ref.watch(bookingRepositoryProvider).options(id),
 );
 
-typedef PreviewKey = ({String serviceId, String? addressId});
+typedef PreviewKey = ({String serviceId, String? addressId, String? promoCode});
 
 final pricePreviewProvider = FutureProvider.autoDispose.family<PricePreview, PreviewKey>(
-  (ref, key) => ref.watch(bookingRepositoryProvider).preview(key.serviceId, key.addressId),
+  (ref, key) => ref.watch(bookingRepositoryProvider).preview(key.serviceId, key.addressId, promoCode: key.promoCode),
 );
 
 /// Call after a booking is created or changed so the Bookings tab shows the latest.

@@ -7,6 +7,7 @@ import '../../core/widgets/user_avatar.dart';
 import '../catalog/category_strip.dart';
 import '../profile/profile_controller.dart';
 import '../profile/user_profile.dart';
+import '../promo/promo_banners.dart';
 import 'main_tab.dart';
 
 class HomeTab extends ConsumerWidget {
@@ -83,6 +84,8 @@ class HomeTab extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 18),
+            const PromoBannerStrip(),
             const SizedBox(height: 22),
             const Text(
               'Category',
@@ -90,7 +93,7 @@ class HomeTab extends ConsumerWidget {
             ),
             const SizedBox(height: 10),
             const CategoryStrip(),
-            // Most Booked and the offer banner come next.
+            // Most Booked comes next.
           ],
         ),
       ),

@@ -31,6 +31,10 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
   DateTime? _date;
   DateTime? _slot;
   final _notes = TextEditingController();
+  final _promo = TextEditingController();
+  String? _appliedCode; // a code the server has accepted
+  String? _promoError;
+  bool _checkingPromo = false;
   bool _busy = false;
   String? _error;
 
@@ -43,6 +47,7 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
   @override
   void dispose() {
     _notes.dispose();
+    _promo.dispose();
     super.dispose();
   }
 
@@ -101,6 +106,31 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
     });
   }
 
+  Future<void> _applyPromo(String serviceId, String? addressId) async {
+    final code = _promo.text.trim();
+    if (code.isEmpty || _checkingPromo) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _checkingPromo = true;
+      _promoError = null;
+    });
+    try {
+      // The server checks the code for this customer and answers with the new price.
+      await ref.read(bookingRepositoryProvider).preview(serviceId, addressId, promoCode: code);
+      if (mounted) setState(() => _appliedCode = code);
+    } on ApiError catch (e) {
+      if (mounted) setState(() => _promoError = e.message);
+    } finally {
+      if (mounted) setState(() => _checkingPromo = false);
+    }
+  }
+
+  void _removePromo() => setState(() {
+        _appliedCode = null;
+        _promo.clear();
+        _promoError = null;
+      });
+
   Future<void> _confirm(ServiceOption option, SavedAddress address, bool isQuote) async {
     final slot = _slot;
     if (slot == null || _busy) return;
@@ -114,6 +144,7 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
             addressId: address.id,
             startsAt: slot,
             notes: _notes.text,
+            promoCode: _appliedCode,
           );
       refreshBookings(ref);
 
@@ -198,7 +229,7 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
   List<Widget> _sections(ServiceCard s, ServiceOption option, AsyncValue<List<SavedAddress>> addresses) {
     final list = addresses.value ?? const <SavedAddress>[];
     final address = _address(list);
-    final preview = ref.watch(pricePreviewProvider((serviceId: option.id, addressId: address?.id)));
+    final preview = ref.watch(pricePreviewProvider((serviceId: option.id, addressId: address?.id, promoCode: _appliedCode)));
     final p = preview.value;
     final isQuote = p?.isQuote ?? option.priceLabel.toLowerCase().contains('quote');
     final slots = _date == null ? const <DateTime>[] : _slotsFor(_date!);
@@ -271,12 +302,73 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
         ),
       const SectionLabel('Notes for the contractor (optional)'),
       TextField(controller: _notes, maxLines: 3, maxLength: 1000, decoration: _fieldDeco('Anything we should know before we arrive?')),
+      if (!isQuote) ...[
+        const SectionLabel('Promo code'),
+        GlassCard(
+          padding: const EdgeInsets.all(14),
+          child: _appliedCode != null
+              ? Row(children: [
+                  const Icon(Icons.check_circle_rounded, color: Color(0xFF1BA864), size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text((p?.promoCode ?? _appliedCode!).toUpperCase(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black)),
+                      const SizedBox(height: 2),
+                      Text(
+                        p?.promoMessage?.isNotEmpty == true ? p!.promoMessage! : (p?.promoLabel ?? 'Code applied'),
+                        style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280)),
+                      ),
+                    ]),
+                  ),
+                  TextButton(onPressed: _removePromo, child: const Text('Remove')),
+                ])
+              : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _promo,
+                        textCapitalization: TextCapitalization.characters,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        maxLength: 40,
+                        onChanged: (_) {
+                          if (_promoError != null) setState(() => _promoError = null);
+                        },
+                        onSubmitted: (_) => _applyPromo(option.id, address?.id),
+                        decoration: _fieldDeco('Enter code').copyWith(counterText: '', contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.blueDark,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(84, 48),
+                        fixedSize: const Size(84, 48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _checkingPromo ? null : () => _applyPromo(option.id, address?.id),
+                      child: _checkingPromo
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text('Apply', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ]),
+                  if (_promoError != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_promoError!, style: const TextStyle(color: AppColors.danger, fontSize: 12.5))),
+                ]),
+        ),
+      ],
       const SectionLabel('Price'),
       GlassCard(
         child: preview.isLoading && p == null
             ? const Padding(padding: EdgeInsets.all(14), child: Center(child: CircularProgressIndicator(strokeWidth: 2.4)))
             : p == null
-                ? const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Text('Could not load the price.', style: TextStyle(color: Color(0xFF6B7280))))
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Row(children: [
+                      Expanded(child: Text(_appliedCode != null ? 'Your code no longer works for this booking.' : 'Could not load the price.', style: const TextStyle(color: Color(0xFF6B7280)))),
+                      if (_appliedCode != null) TextButton(onPressed: _removePromo, child: const Text('Remove code')),
+                    ]),
+                  )
                 : p.isQuote
                     ? const Padding(
                         padding: EdgeInsets.symmetric(vertical: 14),
@@ -286,7 +378,7 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
                         InfoRow('Subtotal', money(p.subtotal, p.currency)),
                         if (p.discount > 0) InfoRow('Discount', '-${money(p.discount, p.currency)}'),
                         if (p.tax > 0) InfoRow('Tax', money(p.tax, p.currency)),
-                        InfoRow('Total', money(p.total, p.currency), bold: true),
+                        InfoRow('Total', p.total <= 0 ? 'Free' : money(p.total, p.currency), bold: true),
                       ]),
       ),
       if (_error != null) Padding(padding: const EdgeInsets.only(top: 14), child: Text(_error!, style: const TextStyle(color: AppColors.danger, fontSize: 13.5))),
@@ -294,7 +386,7 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
       PrimaryButton(label: isQuote ? 'Request a quote' : 'Confirm booking', busy: _busy, onPressed: ready ? () => _confirm(option, address, isQuote) : null),
       const SizedBox(height: 8),
       Text(
-        !ready ? 'Choose an address and a start time to continue.' : isQuote ? 'Our team will reply with a price.' : 'You will pay securely with Stripe on the next step.',
+        !ready ? 'Choose an address and a start time to continue.' : isQuote ? 'Our team will reply with a price.' : (p != null && p.total <= 0) ? 'No payment needed. Your booking is confirmed straight away.' : 'You will pay securely on the next step.',
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
       ),
