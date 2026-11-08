@@ -343,14 +343,18 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.blueDark,
                         foregroundColor: Colors.white,
-                        minimumSize: const Size(84, 48),
-                        fixedSize: const Size(84, 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        minimumSize: const Size(100, 48),
+                        fixedSize: const Size(100, 48),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: _checkingPromo ? null : () => _applyPromo(option.id, address?.id),
                       child: _checkingPromo
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Apply', style: TextStyle(fontWeight: FontWeight.w600)),
+                          : const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Apply', maxLines: 1, softWrap: false, style: TextStyle(fontWeight: FontWeight.w600)),
+                            ),
                     ),
                   ]),
                   if (_promoError != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_promoError!, style: const TextStyle(color: AppColors.danger, fontSize: 12.5))),

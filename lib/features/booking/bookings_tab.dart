@@ -77,9 +77,16 @@ class _BookingsTabState extends ConsumerState<BookingsTab> {
                       height: 44,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(color: _scope == s ? AppColors.blueDark : Colors.transparent, borderRadius: BorderRadius.circular(12)),
-                      child: Text(
-                        _label(s, upcomingCount),
-                        style: TextStyle(fontSize: 14, fontWeight: _scope == s ? FontWeight.w700 : FontWeight.w500, color: _scope == s ? Colors.white : const Color(0xFF6B7280)),
+                      // Shrinks a little instead of touching the edges at large text sizes.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Text(
+                            _label(s, upcomingCount),
+                            style: TextStyle(fontSize: 14, fontWeight: _scope == s ? FontWeight.w700 : FontWeight.w500, color: _scope == s ? Colors.white : const Color(0xFF6B7280)),
+                          ),
+                        ),
                       ),
                     ),
                   ),

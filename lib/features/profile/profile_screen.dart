@@ -252,6 +252,11 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                 onTap: () => context.push('/addresses'),
               ),
               _Row(
+                icon: Icons.credit_card_rounded,
+                title: 'Saved cards',
+                onTap: () => context.push('/cards'),
+              ),
+              _Row(
                 icon: Icons.help_outline_rounded,
                 title: 'Help & Support',
                 onTap: () => context.push('/help'),
