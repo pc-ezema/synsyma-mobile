@@ -10,6 +10,7 @@ import 'payment_flow.dart';
 import 'booking_repository.dart';
 import 'booking_widgets.dart';
 import 'confirm_sheet.dart';
+import 'review_sheet.dart';
 import 'extra_hours_sheet.dart';
 import 'reschedule_screen.dart';
 
@@ -114,6 +115,30 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       if (mounted) showToast(context, e.message);
     } finally {
       if (mounted) setState(() => _paying = false);
+    }
+  }
+
+  /// Opens the rating sheet. [initial] is the star the customer tapped.
+  Future<void> _rate(Booking b, {int initial = 0}) async {
+    final edit = b.review != null;
+    final saved = await showReviewSheet(
+      context,
+      service: b.serviceName,
+      contractor: b.contractorName,
+      initialRating: edit ? b.review!.rating : initial,
+      initialComment: edit ? b.review!.comment : null,
+      onSubmit: (rating, comment) async {
+        try {
+          await ref.read(bookingRepositoryProvider).saveReview(id, rating, comment);
+          return null;
+        } on ApiError catch (e) {
+          return e.message;
+        }
+      },
+    );
+    if (saved) {
+      _changed();
+      if (mounted) showToast(context, 'Thank you for your feedback.');
     }
   }
 
@@ -259,9 +284,11 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           _header(b),
           _banner(b),
           if (b.status == 'quote_sent' && b.quote != null) _quoteCard(b),
+          if (b.status == 'completed') _completedCard(b),
+          if (b.status == 'completed' && (b.review != null || b.canReview)) _reviewCard(b),
           const SectionLabel('Booking details'),
           _details(context, ref, b),
-          const SectionLabel('Price'),
+          SectionLabel(b.status == 'completed' ? 'Receipt' : 'Price'),
           _price(b),
           if (b.events.isNotEmpty) ...[const SectionLabel('History'), _history(b)],
           const SizedBox(height: 22),
@@ -401,6 +428,105 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     );
   }
 
+  /// Shown once a job is done: a thank-you, the team's note, and a way to raise a problem.
+  Widget _completedCard(Booking b) {
+    final done = b.completedAt;
+    final note = (b.completionNote ?? '').trim();
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: GlassCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: const BoxDecoration(color: Color(0xFFE7F7EC), shape: BoxShape.circle),
+              child: const Icon(Icons.check_rounded, size: 24, color: Color(0xFF00A82D)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Job completed', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.black)),
+                if (done != null) Text('${formatDay(done)} at ${formatTime(done)}', style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280))),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Text(
+            note.isNotEmpty ? note : 'Thank you for choosing Synsyma. We hope everything is just right.',
+            style: const TextStyle(fontSize: 14, height: 1.5, color: Color(0xFF4A4E5A)),
+          ),
+          if (note.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            const Text('Note from the Synsyma team', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+          ],
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: () => _openChat(context, ref),
+            icon: const Icon(Icons.flag_outlined, size: 18),
+            label: const Text('Report a problem', style: TextStyle(fontWeight: FontWeight.w600)),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(46),
+              foregroundColor: AppColors.danger,
+              side: const BorderSide(color: Color(0xFFF1B8B8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _stars(int rating, {double size = 22}) => Row(mainAxisSize: MainAxisSize.min, children: [
+        for (var i = 1; i <= 5; i++) Icon(i <= rating ? Icons.star_rounded : Icons.star_outline_rounded, size: size, color: i <= rating ? const Color(0xFFF5A524) : const Color(0xFFC3C9D6)),
+      ]);
+
+  /// Rate the job, or show the rating they gave.
+  Widget _reviewCard(Booking b) {
+    final r = b.review;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: GlassCard(
+        child: r != null
+            ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Expanded(child: Text('Your review', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black))),
+                  if (b.canEditReview)
+                    TextButton(
+                      onPressed: () => _rate(b),
+                      style: TextButton.styleFrom(foregroundColor: AppColors.blueDark, padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 32)),
+                      child: const Text('Edit', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    ),
+                ]),
+                const SizedBox(height: 4),
+                _stars(r.rating),
+                if ((r.comment ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(r.comment!, style: const TextStyle(fontSize: 14, height: 1.5, color: Color(0xFF4A4E5A))),
+                ],
+              ])
+            : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('How was your ${b.serviceName}?', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black)),
+                const SizedBox(height: 2),
+                Text(b.contractorName != null ? 'Rate ${b.contractorName}. It takes a few seconds.' : 'It takes a few seconds.', style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+                const SizedBox(height: 10),
+                Row(children: [
+                  for (var i = 1; i <= 5; i++)
+                    Semantics(
+                      button: true,
+                      label: 'Rate $i ${i == 1 ? 'star' : 'stars'}',
+                      child: InkResponse(
+                        radius: 26,
+                        onTap: () => _rate(b, initial: i),
+                        child: Padding(padding: const EdgeInsets.only(right: 8), child: Icon(Icons.star_outline_rounded, size: 38, color: const Color(0xFFC3C9D6))),
+                      ),
+                    ),
+                ]),
+              ]),
+      ),
+    );
+  }
+
   Widget _details(BuildContext context, WidgetRef ref, Booking b) {
     final pay = b.payment;
     final payment = switch (b.status) {
@@ -443,6 +569,13 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                 InfoRow(b.promoCode != null ? 'Discount (${b.promoCode})' : 'Discount', b.discount > 0 ? '-${money(b.discount, b.currency)}' : money(0, b.currency)),
                 InfoRow('Tax', money(b.tax, b.currency)),
                 InfoRow('Total', money(b.total, b.currency), bold: true),
+                // On a finished job the price card is the receipt: what was paid, how, and any refund.
+                if (b.status == 'completed' && b.payment != null && b.payment!.isPaid) ...[
+                  InfoRow('Paid with', b.payment!.cardLabel),
+                  if (b.payment!.paidAt != null) InfoRow('Paid on', formatDay(b.payment!.paidAt!)),
+                  if (b.payment!.refunded > 0) InfoRow('Refunded', '-${money(b.payment!.refunded, b.currency)}'),
+                  if (b.payment!.refunded > 0) InfoRow('Total paid', money(b.payment!.amount - b.payment!.refunded, b.currency), bold: true),
+                ],
               ]),
       );
 
@@ -474,6 +607,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                         'quote_accepted' => 'Quote accepted',
                         'quote_declined' => 'Quote declined',
                         'quote_expired' => 'Quote expired',
+                        'review_added' => 'You left a review',
+                        'review_edited' => 'You edited your review',
                         _ => events[i].toStatus != null ? statusText(events[i].toStatus!) : 'Update',
                       },
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),

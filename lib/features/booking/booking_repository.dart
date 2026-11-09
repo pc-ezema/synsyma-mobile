@@ -112,6 +112,11 @@ class BookingRepository {
   Future<Booking> declineQuote(String id) async =>
       Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/quote/decline')));
 
+  Future<Booking> saveReview(String id, int rating, String? comment) async =>
+    Booking.fromJson(_map(await _call('PUT', '/users/bookings/$id/review', data: {
+      'rating': rating,
+      if (comment != null && comment.isNotEmpty) 'comment': comment,
+    })));
   Future<Booking> booking(String id) async => Booking.fromJson(_map(await _call('GET', '/users/bookings/$id')));
 }
 

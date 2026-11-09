@@ -212,6 +212,16 @@ class BookingPayment {
       );
 }
 
+/// The customer's own rating of a finished job.
+class BookingReview {
+  const BookingReview({required this.rating, this.comment});
+
+  final int rating; // 1 to 5
+  final String? comment;
+
+  factory BookingReview.fromJson(Map<String, dynamic> j) => BookingReview(rating: (j['rating'] as num?)?.toInt() ?? 0, comment: j['comment'] as String?);
+}
+
 /// The quote side of a booking that is priced by quote.
 class BookingQuote {
   const BookingQuote({required this.state, this.price, this.priceLabel, this.message, this.expiresAt, this.canAccept = false, this.canDecline = false});
@@ -268,6 +278,11 @@ class Booking {
     this.extraHours = 0,
     this.rescheduleCount = 0,
     this.quote,
+    this.completionNote,
+    this.completedAt,
+    this.review,
+    this.canReview = false,
+    this.canEditReview = false,
     this.events = const [],
   });
 
@@ -300,6 +315,11 @@ class Booking {
   final int extraHours; // paid hours added after booking
   final int rescheduleCount;
   final BookingQuote? quote;
+  final String? completionNote; // what the team wrote when the job was done
+  final DateTime? completedAt;
+  final BookingReview? review; // their rating, once given
+  final bool canReview; // a finished job with a contractor, not rated yet
+  final bool canEditReview; // still inside the week they can change it
   final List<BookingEvent> events;
 
   bool get isQuote => priceType == 'quote';
@@ -345,6 +365,11 @@ class Booking {
         rescheduleCount: (j['reschedule_count'] as num?)?.toInt() ?? 0,
         payment: j['payment'] is Map ? BookingPayment.fromJson(Map<String, dynamic>.from(j['payment'] as Map)) : null,
         promoCode: j['promo_code'] as String?,
+        review: j['review'] is Map ? BookingReview.fromJson(Map<String, dynamic>.from(j['review'] as Map)) : null,
+        canReview: j['can_review'] == true,
+        canEditReview: j['can_edit_review'] == true,
+        completionNote: j['completion_note'] as String?,
+        completedAt: DateTime.tryParse((j['completed_at'] as String?) ?? '')?.toLocal(),
         quote: j['quote'] is Map ? BookingQuote.fromJson(Map<String, dynamic>.from(j['quote'] as Map)) : null,
         events: ((j['events'] as List?) ?? const [])
             .map((e) => BookingEvent.fromJson(Map<String, dynamic>.from(e as Map)))

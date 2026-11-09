@@ -27,6 +27,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         'job_completed' => Icons.task_alt_rounded,
         'booking_cancelled' => Icons.cancel_outlined,
         'refund_issued' => Icons.payments_outlined,
+        'review_reminder' => Icons.star_outline_rounded,
         'quote_requested' || 'quote_ready' || 'quote_expiring' || 'quote_expired' => Icons.request_quote_outlined,
         _ => Icons.notifications_none_rounded,
       };
