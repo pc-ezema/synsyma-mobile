@@ -8,6 +8,7 @@ import '../../core/network/api_client.dart';
 import '../../core/router/app_router.dart';
 import '../auth/auth_controller.dart';
 import '../home/main_tab.dart';
+import '../notifications/notifications.dart';
 
 /// Lets us show a banner from outside any screen.
 final rootMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -122,6 +123,15 @@ class PushService {
   }
 
   void _open(RemoteMessage message) {
+    if (message.data['type'] == 'booking') {
+      final id = message.data['booking_id'];
+      _ref.invalidate(unreadNotificationsProvider);
+      if (id != null && _ref.read(authProvider).status == AuthStatus.signedIn) {
+        _ref.read(routerProvider).go('/home');
+        _ref.read(routerProvider).push('/bookings/$id');
+      }
+      return;
+    }
     if (message.data['type'] != 'chat') return;
 
     _ref.read(mainTabProvider.notifier).select(2); // Chat tab
@@ -133,8 +143,10 @@ class PushService {
 
   void _onForeground(RemoteMessage message) {
     _log('A push arrived while the app is open (type: ${message.data['type']})');
-    if (message.data['type'] != 'chat') return;
-    if (_ref.read(mainTabProvider) == 2) return; // already looking at the chat
+    final isBooking = message.data['type'] == 'booking';
+    if (isBooking) _ref.invalidate(unreadNotificationsProvider); // the bell number
+    if (message.data['type'] != 'chat' && !isBooking) return;
+    if (!isBooking && _ref.read(mainTabProvider) == 2) return; // already looking at the chat
 
     final title = message.notification?.title ?? 'New message';
     final body = message.notification?.body;

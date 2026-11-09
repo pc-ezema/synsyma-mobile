@@ -22,14 +22,14 @@ environment:
   sdk: ^3.9.0
 
 flutter_launcher_icons:
-  android: true
+  android: "launcher_icon"
   ios: true
   image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#011027"
-  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
-  background_color_ios: "#011027"
   remove_alpha_ios: true
-  min_sdk_android: 21
+  adaptive_icon_background: "#020F28"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  adaptive_icon_foreground_inset: 0
+  background_color_ios: "020F28"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions

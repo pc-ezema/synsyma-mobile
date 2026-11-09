@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/time_format.dart';
-import '../../core/widgets/sub_page.dart';
 import 'chat_controller.dart';
 import 'chat_models.dart';
 import 'chat_widgets.dart';
+import '../notifications/notification_bell.dart';
 
 /// The Chat tab: your conversation with Synsyma support.
 class ChatTab extends ConsumerStatefulWidget {
@@ -58,11 +58,7 @@ class _ChatTabState extends ConsumerState<ChatTab> {
                 children: [
                   const Text('Chat', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
                   const Spacer(),
-                  IconButton(
-                    tooltip: 'Notifications',
-                    onPressed: () => showToast(context, 'No notifications yet.'),
-                    icon: const Icon(Icons.notifications_rounded, size: 26, color: Color(0xFF4B5060)),
-                  ),
+                  const NotificationBell(),
                 ],
               ),
               const SizedBox(height: 14),

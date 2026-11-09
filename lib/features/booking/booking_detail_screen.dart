@@ -9,6 +9,7 @@ import 'booking_models.dart';
 import 'payment_flow.dart';
 import 'booking_repository.dart';
 import 'booking_widgets.dart';
+import 'confirm_sheet.dart';
 import 'extra_hours_sheet.dart';
 import 'reschedule_screen.dart';
 
@@ -35,7 +36,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   /// When we open an active booking (for example we just came back from Stripe's or PayPal's page),
   /// ask the server to check with the gateways once.
   Future<void> _syncOnce(Booking b) async {
-    if (_synced || b.isDone || b.isQuote) return;
+    if (_synced || b.isDone || b.isQuoteOpen) return;
     _synced = true;
     try {
       final fresh = await ref.read(bookingRepositoryProvider).syncPayment(id);
@@ -69,6 +70,50 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       case PayResult.cancelled:
       case PayResult.redirected:
         break;
+    }
+  }
+
+  Future<void> _acceptQuote(Booking b) async {
+    final yes = await showConfirmSheet(
+      context,
+      title: 'Accept this quote?',
+      message: 'You agree to pay ${b.quote?.priceLabel ?? money(b.total, b.currency)} for this job. You can pay right after.',
+      yesLabel: 'Yes, accept',
+      noLabel: 'Not yet',
+    );
+    if (!yes || !mounted) return;
+    setState(() => _paying = true);
+    try {
+      await ref.read(bookingRepositoryProvider).acceptQuote(id);
+      _changed();
+      if (mounted) showToast(context, 'Quote accepted. You can pay now.');
+    } on ApiError catch (e) {
+      if (mounted) showToast(context, e.message);
+      ref.invalidate(bookingProvider(id)); // it may have expired while the screen was open
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
+  }
+
+  Future<void> _declineQuote(Booking b) async {
+    final sent = b.status == 'quote_sent';
+    final yes = await showConfirmSheet(
+      context,
+      title: sent ? 'Decline this quote?' : 'Cancel this request?',
+      message: sent ? 'The quote will be closed. You can always ask for a new one.' : 'Your quote request will be cancelled.',
+      yesLabel: sent ? 'Yes, decline' : 'Yes, cancel',
+      danger: true,
+    );
+    if (!yes || !mounted) return;
+    setState(() => _paying = true);
+    try {
+      await ref.read(bookingRepositoryProvider).declineQuote(id);
+      _changed();
+      if (mounted) showToast(context, sent ? 'Quote declined.' : 'Request cancelled.');
+    } on ApiError catch (e) {
+      if (mounted) showToast(context, e.message);
+    } finally {
+      if (mounted) setState(() => _paying = false);
     }
   }
 
@@ -213,6 +258,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
         else ...[
           _header(b),
           _banner(b),
+          if (b.status == 'quote_sent' && b.quote != null) _quoteCard(b),
           const SectionLabel('Booking details'),
           _details(context, ref, b),
           const SectionLabel('Price'),
@@ -233,13 +279,23 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             PrimaryButton(label: 'Add extra hours', busy: _paying, onPressed: () => _addHours(b, opts)),
             const SizedBox(height: 14),
           ],
-          b.needsPayment || (opts != null && opts.canAddHours)
+          b.needsPayment || (opts != null && opts.canAddHours) || (b.quote?.canAccept ?? false)
               ? OutlinedButton(
                   style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50), foregroundColor: AppColors.blueDark, side: const BorderSide(color: AppColors.blueDark), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                   onPressed: () => _openChat(context, ref),
                   child: const Text('Chat with us about this booking', style: TextStyle(fontWeight: FontWeight.w600)),
                 )
               : PrimaryButton(label: 'Chat with us about this booking', onPressed: () => _openChat(context, ref)),
+          if (b.quote?.canDecline ?? false) ...[
+            const SizedBox(height: 6),
+            Center(
+              child: TextButton(
+                onPressed: _paying ? null : () => _declineQuote(b),
+                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                child: Text(b.status == 'quote_sent' ? 'Decline quote' : 'Cancel request', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
           if (b.canCancel) ...[
             const SizedBox(height: 6),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -292,9 +348,11 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     String? text;
     switch (b.status) {
       case 'pending_payment':
-        text = 'Your booking is saved. Pay below to confirm it.';
+        text = b.isQuote ? 'You accepted the quote. Pay below to confirm your booking.' : 'Your booking is saved. Pay below to confirm it.';
       case 'quote_requested':
         text = 'We received your request. Our team will reply with a price.';
+      case 'quote_sent':
+        text = (b.quote?.isExpired ?? false) ? 'This quote has expired. Chat with us and we will send a new one.' : 'Your quote is ready. Check the price below, then accept or decline.';
       case 'confirmed':
         text = 'Your booking is confirmed. We are finding the right contractor for you.';
       case 'assigned':
@@ -310,6 +368,34 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           const Icon(Icons.info_outline_rounded, size: 19, color: AppColors.blueDark),
           const SizedBox(width: 10),
           Expanded(child: Text(text, style: const TextStyle(fontSize: 13.5, height: 1.45, color: AppColors.navy))),
+        ]),
+      ),
+    );
+  }
+
+  /// The price the team sent, and the two answers.
+  Widget _quoteCard(Booking b) {
+    final q = b.quote!;
+    final exp = q.expiresAt;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: GlassCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Your quote', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF6B7280))),
+          const SizedBox(height: 4),
+          Text(q.priceLabel ?? money(b.total, b.currency), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.black)),
+          if (exp != null) ...[
+            const SizedBox(height: 4),
+            Text(q.isExpired ? 'Expired on ${formatDay(exp)}' : 'Valid until ${formatDay(exp)}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: q.isExpired ? AppColors.danger : const Color(0xFF6B7280))),
+          ],
+          if ((q.message ?? '').isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(q.message!, style: const TextStyle(fontSize: 14, height: 1.5, color: Color(0xFF4A4E5A))),
+          ],
+          if (q.canAccept) ...[
+            const SizedBox(height: 16),
+            PrimaryButton(label: 'Accept quote', busy: _paying, onPressed: () => _acceptQuote(b)),
+          ],
         ]),
       ),
     );
@@ -347,14 +433,14 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   }
 
   Widget _price(Booking b) => GlassCard(
-        child: b.isQuote
+        child: b.isQuote && (b.quote?.price == null)
             ? const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Text('Priced by quote. We will send you the price.', style: TextStyle(fontSize: 14, color: Color(0xFF6B7280))),
               )
             : InfoList(rows: [
                 InfoRow('Amount', money(b.subtotal, b.currency)),
-                InfoRow('Discount', b.discount > 0 ? '-${money(b.discount, b.currency)}' : money(0, b.currency)),
+                InfoRow(b.promoCode != null ? 'Discount (${b.promoCode})' : 'Discount', b.discount > 0 ? '-${money(b.discount, b.currency)}' : money(0, b.currency)),
                 InfoRow('Tax', money(b.tax, b.currency)),
                 InfoRow('Total', money(b.total, b.currency), bold: true),
               ]),
@@ -382,6 +468,12 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                         'created' => 'Booking created',
                         'rescheduled' => 'Rescheduled',
                         'extra_hours' => 'Extra hours added',
+                        'quote_sent' => 'Quote sent',
+                        'quote_revised' => 'Quote updated',
+                        'quote_withdrawn' => 'Quote withdrawn',
+                        'quote_accepted' => 'Quote accepted',
+                        'quote_declined' => 'Quote declined',
+                        'quote_expired' => 'Quote expired',
                         _ => events[i].toStatus != null ? statusText(events[i].toStatus!) : 'Update',
                       },
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),

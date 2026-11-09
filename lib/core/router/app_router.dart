@@ -28,6 +28,7 @@ import '../../features/booking/address_form_screen.dart';
 import '../../features/booking/booking_detail_screen.dart';
 import '../../features/booking/booking_models.dart';
 import '../../features/cards/saved_cards_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -165,6 +166,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/help', builder: (_, __) => const HelpScreen()),
       GoRoute(path: '/profile/delete', builder: (_, __) => const DeleteAccountScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
     ],
   );
 });

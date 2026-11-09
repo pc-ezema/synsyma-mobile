@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/sub_page.dart';
 import '../home/main_tab.dart';
 import 'booking_models.dart';
 import 'booking_repository.dart';
 import 'booking_widgets.dart';
+import '../notifications/notification_bell.dart';
 
 /// The body of the Bookings tab: Upcoming, Canceled and Completed.
 class BookingsTab extends ConsumerStatefulWidget {
@@ -52,11 +52,7 @@ class _BookingsTabState extends ConsumerState<BookingsTab> {
             children: [
               const Text('Bookings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
               const Spacer(),
-              IconButton(
-                tooltip: 'Notifications',
-                onPressed: () => showToast(context, 'No notifications yet.'),
-                icon: const Icon(Icons.notifications_rounded, size: 26, color: Color(0xFF4B5060)),
-              ),
+              const NotificationBell(),
             ],
           ),
         ),

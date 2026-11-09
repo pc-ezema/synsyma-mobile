@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/sub_page.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../catalog/category_strip.dart';
 import '../profile/profile_controller.dart';
 import '../profile/user_profile.dart';
 import '../promo/promo_banners.dart';
 import 'main_tab.dart';
+import '../notifications/notification_bell.dart';
 
 class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
@@ -35,11 +35,7 @@ class HomeTab extends ConsumerWidget {
                   ),
                 ),
                 const Spacer(),
-                IconButton(
-                  tooltip: 'Notifications',
-                  onPressed: () => showToast(context, 'No notifications yet.'),
-                  icon: const Icon(Icons.notifications_rounded, size: 26, color: Color(0xFF4B5060)),
-                ),
+                const NotificationBell(),
               ],
             ),
             const SizedBox(height: 22),

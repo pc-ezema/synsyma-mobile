@@ -103,6 +103,15 @@ class BookingRepository {
   Future<BookingOptions> options(String id) async =>
       BookingOptions.fromJson(_map(await _call('GET', '/users/bookings/$id/options')));
 
+  // ---- quotes ----
+  /// Accepting turns the quote into an unpaid booking, which the customer then pays.
+  Future<Booking> acceptQuote(String id) async =>
+      Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/quote/accept')));
+
+  /// Declines a sent quote, or cancels a request that has not been priced yet.
+  Future<Booking> declineQuote(String id) async =>
+      Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/quote/decline')));
+
   Future<Booking> booking(String id) async => Booking.fromJson(_map(await _call('GET', '/users/bookings/$id')));
 }
 

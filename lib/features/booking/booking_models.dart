@@ -212,6 +212,31 @@ class BookingPayment {
       );
 }
 
+/// The quote side of a booking that is priced by quote.
+class BookingQuote {
+  const BookingQuote({required this.state, this.price, this.priceLabel, this.message, this.expiresAt, this.canAccept = false, this.canDecline = false});
+
+  final String state; // requested | sent | expired | accepted | closed
+  final double? price;
+  final String? priceLabel;
+  final String? message; // what the team wrote with the price
+  final DateTime? expiresAt; // already in the phone's local time
+  final bool canAccept;
+  final bool canDecline;
+
+  bool get isExpired => state == 'expired';
+
+  factory BookingQuote.fromJson(Map<String, dynamic> j) => BookingQuote(
+        state: (j['state'] as String?) ?? 'requested',
+        price: (j['price'] as num?)?.toDouble(),
+        priceLabel: j['price_label'] as String?,
+        message: j['message'] as String?,
+        expiresAt: DateTime.tryParse((j['expires_at'] as String?) ?? '')?.toLocal(),
+        canAccept: j['can_accept'] == true,
+        canDecline: j['can_decline'] == true,
+      );
+}
+
 class Booking {
   const Booking({
     required this.id,
@@ -242,6 +267,7 @@ class Booking {
     this.promoCode,
     this.extraHours = 0,
     this.rescheduleCount = 0,
+    this.quote,
     this.events = const [],
   });
 
@@ -273,11 +299,13 @@ class Booking {
   final String? promoCode;
   final int extraHours; // paid hours added after booking
   final int rescheduleCount;
+  final BookingQuote? quote;
   final List<BookingEvent> events;
 
   bool get isQuote => priceType == 'quote';
   bool get canCancel => const ['pending_payment', 'confirmed', 'assigned'].contains(status);
-  bool get needsPayment => status == 'pending_payment' && !isQuote && total > 0;
+  bool get isQuoteOpen => const ['quote_requested', 'quote_sent'].contains(status); // still waiting on a price or an answer
+  bool get needsPayment => status == 'pending_payment' && total > 0; // includes a quote the customer has accepted
   bool get isDone => const ['completed', 'cancelled', 'refunded'].contains(status);
   String get title => tier == null || tier!.isEmpty ? serviceName : '$serviceName (${tier![0].toUpperCase()}${tier!.substring(1)})';
   String get shortAddress => '$addressLine1, $city';
@@ -317,6 +345,7 @@ class Booking {
         rescheduleCount: (j['reschedule_count'] as num?)?.toInt() ?? 0,
         payment: j['payment'] is Map ? BookingPayment.fromJson(Map<String, dynamic>.from(j['payment'] as Map)) : null,
         promoCode: j['promo_code'] as String?,
+        quote: j['quote'] is Map ? BookingQuote.fromJson(Map<String, dynamic>.from(j['quote'] as Map)) : null,
         events: ((j['events'] as List?) ?? const [])
             .map((e) => BookingEvent.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),

@@ -13,6 +13,7 @@ import 'profile_controller.dart';
 import 'user_profile.dart';
 import '../../core/config/env.dart';
 import '../push/push_debug.dart';
+import '../notifications/notification_bell.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -152,11 +153,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
                 ),
                 const Spacer(),
-                IconButton(
-                  tooltip: 'Notifications',
-                  onPressed: () => showToast(context, 'No notifications yet.'),
-                  icon: const Icon(Icons.notifications_rounded, size: 26, color: Color(0xFF4B5060)),
-                ),
+                const NotificationBell(),
               ],
             ),
             const SizedBox(height: 12),
