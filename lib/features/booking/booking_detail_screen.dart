@@ -11,6 +11,7 @@ import 'booking_repository.dart';
 import 'booking_widgets.dart';
 import 'confirm_sheet.dart';
 import 'review_sheet.dart';
+import 'problem_sheet.dart';
 import 'extra_hours_sheet.dart';
 import 'reschedule_screen.dart';
 
@@ -183,6 +184,45 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     }
   }
 
+  /// The customer says the job is finished.
+  Future<void> _complete() async {
+    final yes = await showConfirmSheet(
+      context,
+      title: 'Mark this job as completed?',
+      message: 'Only do this if the work is finished and you are happy with it. You will not be able to add extra hours afterwards.',
+      yesLabel: 'Yes, completed',
+      noLabel: 'Not yet',
+    );
+    if (!yes || !mounted) return;
+    setState(() => _paying = true);
+    try {
+      await ref.read(bookingRepositoryProvider).completeBooking(id);
+      _changed();
+      if (mounted) showToast(context, 'Thank you. Your job is marked completed.');
+    } on ApiError catch (e) {
+      if (mounted) showToast(context, e.message);
+      _changed();
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
+  }
+
+  /// Something is wrong with a job that is not finished yet.
+  Future<void> _reportProblem() async {
+    final repo = ref.read(bookingRepositoryProvider);
+    final sent = await showProblemSheet(context, onSubmit: (note) async {
+      try {
+        await repo.reportProblem(id, note);
+        return null;
+      } on ApiError catch (e) {
+        return e.message;
+      }
+    });
+    if (!sent || !mounted) return;
+    _changed();
+    showToast(context, 'We have been told. You can also message us in Chat.');
+  }
+
   Future<void> _cancel() async {
     final repo = ref.read(bookingRepositoryProvider);
     CancelQuote q;
@@ -306,7 +346,27 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             PrimaryButton(label: 'Add extra hours', busy: _paying, onPressed: () => _addHours(b, opts)),
             const SizedBox(height: 14),
           ],
-          b.needsPayment || (opts != null && opts.canAddHours) || (b.quote?.canAccept ?? false)
+          if (opts != null && opts.canComplete) ...[
+            PrimaryButton(label: 'Mark as completed', busy: _paying, onPressed: _complete),
+            const SizedBox(height: 10),
+          ],
+          if (opts != null && opts.canReport) ...[
+            Center(
+              child: TextButton(
+                onPressed: _paying ? null : _reportProblem,
+                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                child: const Text('Report a problem', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (opts != null && opts.problemReported) ...[
+            const Padding(
+              padding: EdgeInsets.only(bottom: 14),
+              child: Text('Problem reported. Our team will be in touch.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13.5, color: Color(0xFF6B7280))),
+            ),
+          ],
+          b.needsPayment || (opts != null && (opts.canAddHours || opts.canComplete)) || (b.quote?.canAccept ?? false)
               ? OutlinedButton(
                   style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50), foregroundColor: AppColors.blueDark, side: const BorderSide(color: AppColors.blueDark), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                   onPressed: () => _openChat(context, ref),
@@ -326,12 +386,14 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           if (b.canCancel) ...[
             const SizedBox(height: 6),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              TextButton(
-                onPressed: _paying ? null : () => _reschedule(b, opts),
-                style: TextButton.styleFrom(foregroundColor: AppColors.blueDark),
-                child: const Text('Reschedule', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-              ),
-              const SizedBox(width: 12),
+              if (b.status != 'en_route') ...[
+                TextButton(
+                  onPressed: _paying ? null : () => _reschedule(b, opts),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.blueDark),
+                  child: const Text('Reschedule', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 12),
+              ],
               TextButton(
                 onPressed: _paying ? null : _cancel,
                 style: TextButton.styleFrom(foregroundColor: AppColors.danger),
@@ -384,6 +446,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
         text = 'Your booking is confirmed. We are finding the right contractor for you.';
       case 'assigned':
         text = '${b.contractorName ?? 'A contractor'} will come to you at the time shown below.';
+      case 'en_route':
+        text = '${b.contractorName ?? 'Your contractor'} is on the way to you.';
     }
     if (text == null) return const SizedBox.shrink();
     return Padding(
@@ -464,7 +528,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           OutlinedButton.icon(
             onPressed: () => _openChat(context, ref),
             icon: const Icon(Icons.flag_outlined, size: 18),
-            label: const Text('Report a problem', style: TextStyle(fontWeight: FontWeight.w600)),
+            label: const Text('Something not right? Message us', style: TextStyle(fontWeight: FontWeight.w600)),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(46),
               foregroundColor: AppColors.danger,
@@ -537,23 +601,15 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       _ => pay != null && pay.isPaid ? 'Paid · ${pay.cardLabel}' : 'Paid',
     };
     return GlassCard(
-      child: Column(children: [
-        InfoList(rows: [
-          InfoRow('Date', formatDay(b.startsAt)),
-          InfoRow('Time', formatTime(b.startsAt)),
-          InfoRow('Duration', b.durationLabel),
-          InfoRow('Payment', payment),
-          InfoRow('Address', b.address),
-          if ((b.instructions ?? '').isNotEmpty) InfoRow('Access notes', b.instructions!),
-          if ((b.notes ?? '').isNotEmpty) InfoRow('Your notes', b.notes!),
-          InfoRow('Contractor', b.contractorName ?? 'Not assigned yet'),
-        ]),
-        const SizedBox(height: 4),
-        TextButton(
-          onPressed: () => _openChat(context, ref),
-          style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-          child: const Text('Report an issue', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        ),
+      child: InfoList(rows: [
+        InfoRow('Date', formatDay(b.startsAt)),
+        InfoRow('Time', formatTime(b.startsAt)),
+        InfoRow('Duration', b.durationLabel),
+        InfoRow('Payment', payment),
+        InfoRow('Address', b.address),
+        if ((b.instructions ?? '').isNotEmpty) InfoRow('Access notes', b.instructions!),
+        if ((b.notes ?? '').isNotEmpty) InfoRow('Your notes', b.notes!),
+        InfoRow('Contractor', b.contractorName ?? 'Not assigned yet'),
       ]),
     );
   }
@@ -609,6 +665,8 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                         'quote_expired' => 'Quote expired',
                         'review_added' => 'You left a review',
                         'review_edited' => 'You edited your review',
+                        'problem_reported' => 'Problem reported',
+                        'problem_resolved' => 'Problem resolved',
                         _ => events[i].toStatus != null ? statusText(events[i].toStatus!) : 'Update',
                       },
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),

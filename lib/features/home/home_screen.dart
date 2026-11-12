@@ -7,6 +7,7 @@ import '../chat/chat_tab.dart';
 import 'home_tab.dart';
 import 'main_tab.dart';
 import '../booking/bookings_tab.dart';
+import '../push/app_badge.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -15,6 +16,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(mainTabProvider);
     final chatUnread = ref.watch(chatUnreadProvider);
+    ref.watch(appBadgeProvider); // keeps the number on the app icon up to date
 
     return PopScope(
       canPop: tab == 0, // back from another tab returns to Home first

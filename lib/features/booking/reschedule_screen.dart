@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/sub_page.dart';
 import 'booking_models.dart';
 import 'booking_repository.dart';
+import 'booking_rules.dart';
 import 'booking_widgets.dart';
 import 'confirm_sheet.dart';
 
@@ -19,9 +20,10 @@ class RescheduleScreen extends ConsumerStatefulWidget {
 }
 
 class _RescheduleScreenState extends ConsumerState<RescheduleScreen> {
+  // Minimum notice and how far ahead come from Settings in the admin (see booking_rules.dart).
+  int get _minNoticeHours => ref.read(bookingRulesProvider).value?.minNoticeHours ?? 24;
+  int get _maxDaysAhead => ref.read(bookingRulesProvider).value?.maxDaysAhead ?? 90;
   // Keep these the same as config/booking.php on the API.
-  static const _minNoticeHours = 24;
-  static const _maxDaysAhead = 90;
   static const _firstHour = 8;
   static const _lastHour = 18;
 
@@ -36,7 +38,7 @@ class _RescheduleScreenState extends ConsumerState<RescheduleScreen> {
     _date = _firstAvailableDay();
   }
 
-  DateTime get _earliest => DateTime.now().add(const Duration(hours: _minNoticeHours));
+  DateTime get _earliest => DateTime.now().add(Duration(hours: _minNoticeHours));
 
   List<DateTime> _slotsFor(DateTime day) {
     final out = <DateTime>[];
@@ -66,7 +68,7 @@ class _RescheduleScreenState extends ConsumerState<RescheduleScreen> {
       context: context,
       initialDate: _date ?? first,
       firstDate: first,
-      lastDate: DateTime.now().add(const Duration(days: _maxDaysAhead)),
+      lastDate: DateTime.now().add(Duration(days: _maxDaysAhead)),
     );
     if (picked == null) return;
     setState(() {
@@ -105,6 +107,15 @@ class _RescheduleScreenState extends ConsumerState<RescheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // When the admin's rules arrive, recompute the first day that can be booked.
+    ref.listen(bookingRulesProvider, (_, __) {
+      if (!mounted) return;
+      setState(() {
+        _date = _firstAvailableDay();
+        _slot = null;
+      });
+    });
+
     final b = widget.booking;
     final slots = _date == null ? const <DateTime>[] : _slotsFor(_date!);
 

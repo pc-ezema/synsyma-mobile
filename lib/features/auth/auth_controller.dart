@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import 'auth_repository.dart';
+import '../push/app_badge.dart';
 import '../push/push_service.dart';
 
 const refreshTokenKey = 'refresh_token';
@@ -71,6 +72,7 @@ class AuthController extends Notifier<AuthState> {
     final storage = ref.read(storageProvider);
     await storage.delete(key: tokenKey);
     await storage.delete(key: refreshTokenKey);
+    await clearAppBadge(); // so the next person does not see the old number (also covers an expired session)
     state = const AuthState(AuthStatus.signedOut);
   }
 }

@@ -145,6 +145,9 @@ class BookingOptions {
     required this.pricePerHour,
     required this.currency,
     required this.hoursMessage,
+    this.canComplete = false,
+    this.canReport = false,
+    this.problemReported = false,
   });
   final bool canReschedule;
   final String rescheduleMessage;
@@ -153,10 +156,14 @@ class BookingOptions {
   final double pricePerHour;
   final String currency;
   final String hoursMessage;
+  final bool canComplete; // the customer may mark an in-progress job as completed
+  final bool canReport; // the customer may report a problem
+  final bool problemReported; // a problem is already open
 
   factory BookingOptions.fromJson(Map<String, dynamic> j) {
     final r = j['reschedule'] is Map ? Map<String, dynamic>.from(j['reschedule'] as Map) : <String, dynamic>{};
     final h = j['extra_hours'] is Map ? Map<String, dynamic>.from(j['extra_hours'] as Map) : <String, dynamic>{};
+    final c = j['complete'] is Map ? Map<String, dynamic>.from(j['complete'] as Map) : <String, dynamic>{};
     return BookingOptions(
       canReschedule: r['allowed'] == true,
       rescheduleMessage: (r['message'] as String?) ?? '',
@@ -165,6 +172,9 @@ class BookingOptions {
       pricePerHour: _d(h['price_per_hour']),
       currency: (h['currency'] as String?) ?? 'USD',
       hoursMessage: (h['message'] as String?) ?? '',
+      canComplete: c['can_complete'] == true,
+      canReport: c['can_report'] == true,
+      problemReported: c['problem_reported'] == true,
     );
   }
 }
@@ -323,7 +333,7 @@ class Booking {
   final List<BookingEvent> events;
 
   bool get isQuote => priceType == 'quote';
-  bool get canCancel => const ['pending_payment', 'confirmed', 'assigned'].contains(status);
+  bool get canCancel => const ['pending_payment', 'confirmed', 'assigned', 'en_route'].contains(status);
   bool get isQuoteOpen => const ['quote_requested', 'quote_sent'].contains(status); // still waiting on a price or an answer
   bool get needsPayment => status == 'pending_payment' && total > 0; // includes a quote the customer has accepted
   bool get isDone => const ['completed', 'cancelled', 'refunded'].contains(status);
@@ -381,6 +391,7 @@ String statusText(String s) => const {
       'pending_payment': 'Awaiting payment',
       'confirmed': 'Confirmed',
       'assigned': 'Contractor assigned',
+      'en_route': 'On the way',
       'in_progress': 'In progress',
       'completed': 'Completed',
       'cancelled': 'Cancelled',

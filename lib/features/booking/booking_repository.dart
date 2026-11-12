@@ -97,6 +97,14 @@ class BookingRepository {
   Future<Booking> cancelBooking(String id) async =>
       Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/cancel')));
 
+  /// The customer says the job is finished (only while it is in progress).
+  Future<Booking> completeBooking(String id) async =>
+      Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/complete')));
+
+  /// Tells the team something is wrong. The note is required (at least 5 characters).
+  Future<Booking> reportProblem(String id, String note) async =>
+      Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/problem', data: {'note': note})));
+
   Future<Booking> reschedule(String id, DateTime startsAt) async =>
       Booking.fromJson(_map(await _call('POST', '/users/bookings/$id/reschedule', data: {'starts_at': isoWithOffset(startsAt)})));
 

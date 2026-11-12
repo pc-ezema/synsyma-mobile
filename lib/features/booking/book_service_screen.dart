@@ -8,6 +8,7 @@ import '../catalog/catalog_models.dart';
 import '../catalog/catalog_repository.dart';
 import 'booking_models.dart';
 import 'booking_repository.dart';
+import 'booking_rules.dart';
 import 'payment_flow.dart';
 import 'booking_widgets.dart';
 
@@ -21,14 +22,16 @@ class BookServiceScreen extends ConsumerStatefulWidget {
 }
 
 class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
+  // Minimum notice and how far ahead come from Settings in the admin (see booking_rules.dart).
+  int get _minNoticeHours => ref.read(bookingRulesProvider).value?.minNoticeHours ?? 24;
+  int get _maxDaysAhead => ref.read(bookingRulesProvider).value?.maxDaysAhead ?? 90;
   // Keep these the same as config/booking.php on the API.
-  static const _minNoticeHours = 24;
-  static const _maxDaysAhead = 90;
   static const _firstHour = 8;
   static const _lastHour = 18;
 
   String? _addressId;
   DateTime? _date;
+  bool _datePicked = false; // once they choose a date themselves, we stop choosing for them
   DateTime? _slot;
   final _notes = TextEditingController();
   final _promo = TextEditingController();
@@ -51,7 +54,14 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
     super.dispose();
   }
 
-  DateTime get _earliest => DateTime.now().add(const Duration(hours: _minNoticeHours));
+  DateTime get _earliest => DateTime.now().add(Duration(hours: _minNoticeHours));
+
+  /// "24 hours" or "2 days", for the hint under the times.
+  String get _noticeText {
+    final h = _minNoticeHours;
+    if (h >= 24 && h % 24 == 0) return '${h ~/ 24} ${h == 24 ? 'day' : 'days'}';
+    return '$h ${h == 1 ? 'hour' : 'hours'}';
+  }
 
   List<DateTime> _slotsFor(DateTime day) {
     final out = <DateTime>[];
@@ -97,11 +107,12 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
       context: context,
       initialDate: _date ?? first,
       firstDate: first,
-      lastDate: DateTime.now().add(const Duration(days: _maxDaysAhead)),
+      lastDate: DateTime.now().add(Duration(days: _maxDaysAhead)),
     );
     if (picked == null) return;
     setState(() {
       _date = picked;
+      _datePicked = true;
       _slot = null;
     });
   }
@@ -169,6 +180,10 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Redraw when the admin's booking rules arrive, and move the suggested date if they changed it.
+    ref.watch(bookingRulesProvider);
+    if (!_datePicked) _date = _firstAvailableDay();
+
     final service = ref.watch(serviceProvider(widget.id));
     final addresses = ref.watch(addressesProvider);
 
@@ -294,9 +309,9 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
                   ),
               ]),
             const SizedBox(height: 10),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Text('Start times run from 8:00 AM to 6:00 PM. Please book at least 24 hours ahead.', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text('Start times run from 8:00 AM to 6:00 PM. Please book at least $_noticeText ahead.', style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
             ),
           ]),
         ),
