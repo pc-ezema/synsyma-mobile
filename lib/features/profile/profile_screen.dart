@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_error.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/sub_page.dart';
@@ -14,6 +15,8 @@ import 'user_profile.dart';
 import '../../core/config/env.dart';
 import '../push/push_debug.dart';
 import '../notifications/notification_bell.dart';
+
+const _siteBase = 'https://synsyma.com';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -89,6 +92,15 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
       if (mounted) showToast(context, e.message);
     } finally {
       if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _openSite(String page) async {
+    try {
+      final ok = await launchUrl(Uri.parse('$_siteBase/$page'), mode: LaunchMode.externalApplication);
+      if (!ok && mounted) showToast(context, 'Could not open the page.');
+    } on PlatformException {
+      if (mounted) showToast(context, 'Could not open the page.');
     }
   }
 
@@ -260,8 +272,13 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
               ),
               _Row(
                 icon: Icons.description_outlined,
-                title: 'Terms & Condition',
-                onTap: () => context.push('/terms'),
+                title: 'Terms & Conditions',
+                onTap: () => _openSite('terms.html'),
+              ),
+              _Row(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Privacy Policy',
+                onTap: () => _openSite('privacy.html'),
               ),
               if (Env.name == 'local')
               _Row(

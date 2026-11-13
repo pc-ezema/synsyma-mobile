@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_error.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/auth_widgets.dart';
 import 'auth_repository.dart';
+
+const _siteBase = 'https://synsyma.com';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -50,7 +53,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       errors['password'] = 'Use at least 8 characters with letters and numbers.';
     }
     if (_confirm.text != _password.text) errors['confirm'] = 'Passwords do not match.';
-    if (!_terms) errors['terms'] = 'Please accept the Terms & Conditions.';
+    if (!_terms) errors['terms'] = 'Please accept the Terms & Conditions and Privacy Policy.';
 
     setState(() {
       _errors = errors;
@@ -173,14 +176,29 @@ class _TermsRow extends StatefulWidget {
 class _TermsRowState extends State<_TermsRow> {
   late final TapGestureRecognizer _toggle = TapGestureRecognizer()
     ..onTap = () => widget.onChanged(!widget.accepted);
-  late final TapGestureRecognizer _open = TapGestureRecognizer()
-    ..onTap = () => context.push('/terms');
+  late final TapGestureRecognizer _openTerms = TapGestureRecognizer()
+    ..onTap = () => _openSite('terms.html');
+  late final TapGestureRecognizer _openPrivacy = TapGestureRecognizer()
+    ..onTap = () => _openSite('privacy.html');
 
   @override
   void dispose() {
     _toggle.dispose();
-    _open.dispose();
+    _openTerms.dispose();
+    _openPrivacy.dispose();
     super.dispose();
+  }
+
+  Future<void> _openSite(String page) async {
+    var ok = false;
+    try {
+      ok = await launchUrl(Uri.parse('$_siteBase/$page'), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the page.')));
+    }
   }
 
   @override
@@ -193,7 +211,7 @@ class _TermsRowState extends State<_TermsRow> {
           children: [
             Semantics(
               checked: accepted,
-              label: 'I agree to the Terms and Conditions',
+              label: 'I agree to the Terms and Conditions and the Privacy Policy',
               child: InkWell(
                 onTap: () => widget.onChanged(!accepted),
                 borderRadius: BorderRadius.circular(8),
@@ -225,7 +243,13 @@ class _TermsRowState extends State<_TermsRow> {
                     TextSpan(text: 'I Agree to the ', recognizer: _toggle),
                     TextSpan(
                       text: 'Terms & Conditions',
-                      recognizer: _open,
+                      recognizer: _openTerms,
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.blueDark),
+                    ),
+                    TextSpan(text: ' and ', recognizer: _toggle),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      recognizer: _openPrivacy,
                       style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.blueDark),
                     ),
                   ],
