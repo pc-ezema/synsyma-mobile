@@ -11,6 +11,7 @@ import 'main_tab.dart';
 import '../notifications/notification_bell.dart';
 import 'home_repository.dart';
 import 'home_sections.dart';
+import 'home_more_sections.dart';
 
 class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
@@ -108,7 +109,11 @@ class HomeTab extends ConsumerWidget {
               const SizedBox(height: 22),
               const MostBookedRow(),
               const BookAgainRow(), // only once they have had a job done
+              const TodoBundles(), // new: themed bundles
               const HowItWorks(), // only for new customers
+              const WhySynsyma(), // new: trust cards
+              const UrgentCard(), // new: urgent job banner
+              const CommonQuestions(), // new: FAQ + Terms and Privacy links
             ],
           ),
         ),
