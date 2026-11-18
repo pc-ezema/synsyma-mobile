@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 
 // Extra scrolling sections for the Home tab. They need no data from the server, so they never
 // break or hide the existing blocks. Taps open the existing /categories screen.
-
-const _siteBase = 'https://www.synsyma.com';
 
 /// Card heights grow a little with the app's text boost so nothing overflows.
 double _scaled(BuildContext context, double h) {
@@ -225,13 +222,6 @@ class CommonQuestions extends StatelessWidget {
         'Message support from the Chat tab and we will help. Include your booking so we can find it quickly.'),
   ];
 
-  Future<void> _open(BuildContext context, String page) async {
-    final ok = await launchUrl(Uri.parse('$_siteBase/$page'), mode: LaunchMode.externalApplication);
-    if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Couldn't open the page.")));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -268,4 +258,3 @@ class CommonQuestions extends StatelessWidget {
     );
   }
 }
-
