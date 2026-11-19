@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/network/api_error.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/sub_page.dart';
+import 'address_search_field.dart';
+import 'address_suggestion.dart';
 import 'booking_models.dart';
 import 'booking_repository.dart';
 import 'regions.dart';
@@ -91,6 +93,22 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         TextField(controller: c, style: _text, textCapitalization: caps, maxLength: maxLength, maxLines: maxLines, decoration: _deco(hint: hint, error: error)),
       );
 
+  /// Fills the fields from a picked suggestion. Anything that doesn't fit our checks is left for the customer.
+  void _applyAddress(AddressSuggestion a) {
+    setState(() {
+      if (a.addressLine1.isNotEmpty) _line1.text = a.addressLine1;
+      if (a.city.isNotEmpty) _city.text = a.city;
+      final r = matchRegion(_country, a.region);
+      if (r != null) _region = r;
+      if (a.postalCode.isNotEmpty && postalValid(_country, a.postalCode)) _postal.text = a.postalCode;
+      _errors
+        ..remove('line1')
+        ..remove('city')
+        ..remove('region')
+        ..remove('postal');
+    });
+  }
+
   bool _validate() {
     _errors.clear();
     if (_line1.text.trim().length < 3) _errors['line1'] = 'Enter the street address.';
@@ -150,6 +168,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
             }),
           ),
         ),
+        AddressSearchField(country: _country, onPick: _applyAddress),
         _field('Street address', _line1, hint: 'Enter street address', caps: TextCapitalization.words, error: _errors['line1']),
         _field('Apartment, suite, unit (optional)', _line2, hint: 'Apt, suite, unit', caps: TextCapitalization.words),
         _field('City', _city, hint: 'Enter city', caps: TextCapitalization.words, error: _errors['city']),

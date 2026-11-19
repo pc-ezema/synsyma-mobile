@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_error.dart';
+import 'address_suggestion.dart';
 import 'booking_models.dart';
 
 final bookingRepositoryProvider = Provider((ref) => BookingRepository(ref.watch(dioProvider)));
@@ -34,6 +35,20 @@ class BookingRepository {
   }
 
   Future<void> deleteAddress(String id) => _call('DELETE', '/users/addresses/$id');
+
+  /// Address suggestions while the customer types. Returns null when the search was cancelled
+  /// because they kept typing. Throws an ApiError if the search is unavailable.
+  Future<List<AddressSuggestion>?> searchAddresses(String q, String country, {CancelToken? cancelToken}) async {
+    try {
+      final res = await _dio.get<dynamic>('/users/address-search', queryParameters: {'q': q, 'country': country}, cancelToken: cancelToken);
+      final json = res.data;
+      final data = json is Map ? json['data'] : null;
+      return (data is List ? data : const []).map((e) => AddressSuggestion.fromJson(_map(e))).toList();
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) return null;
+      throw ApiError.from(e);
+    }
+  }
 
   // ---- bookings ----
   /// promoCode: checked by the server. A bad code throws an ApiError with the reason.

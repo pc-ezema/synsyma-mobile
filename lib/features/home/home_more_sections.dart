@@ -276,8 +276,8 @@ class WhySynsyma extends StatelessWidget {
   const WhySynsyma({super.key});
 
   static const _items = [
-    (Icons.verified_user_rounded, 'Verified pros', 'Every pro is ID-checked and approved before they work for you.'),
-    (Icons.fact_check_rounded, 'Background checked', 'We run a background check before a pro is approved.'),
+    (Icons.verified_user_rounded, 'Verified contractors', 'Every contractor is ID-checked and approved before they work for you.'),
+    (Icons.fact_check_rounded, 'Background checked', 'We run a background check before a contractor is approved.'),
     (Icons.lock_rounded, 'Secure payment', 'Pay safely by card. Nothing is charged without your booking.'),
     (Icons.event_repeat_rounded, 'Flexible plans', 'Free cancellation when your job is more than 24 hours away.'),
   ];
@@ -378,7 +378,7 @@ class UrgentCard extends StatelessWidget {
                       const Text('Something urgent?',
                           style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white)),
                       const SizedBox(height: 6),
-                      const Text('Pick a service and book the next available pro.',
+                      const Text('Pick a service and book the next available contractor.',
                           style: TextStyle(fontSize: 13, height: 1.4, color: Color(0xDDFFFFFF))),
                       const SizedBox(height: 14),
                       FilledButton(
@@ -413,7 +413,7 @@ class CommonQuestions extends StatelessWidget {
 
   static const _faq = [
     ('How do you choose a contractor?',
-        'Every contractor is verified (ID and background check) before they are approved. We assign the right pro to your booking and you can see who is coming.'),
+        'Every contractor is verified (ID and background check) before they are approved. We assign the right contractor to your booking and you can see who is coming.'),
     ('Can I cancel or reschedule?',
         'Cancelling is free when no contractor is assigned yet, or when your job is more than 24 hours away. Closer to the time, the cancellation terms apply. Details are in the Terms.'),
     ('How do I pay?',

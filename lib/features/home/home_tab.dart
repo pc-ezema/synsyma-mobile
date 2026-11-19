@@ -96,12 +96,12 @@ class HomeTab extends ConsumerWidget {
                   ),
                 ],
               ),
+              const NextJobCard(), // only when they have an upcoming job
               const SizedBox(height: 18),
               const PromoBannerStrip(),
               const SizedBox(height: 22),
-              const NextJobCard(), // only when they have an upcoming job
               const Text(
-                'Category',
+                'Categories',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black),
               ),
               const SizedBox(height: 10),
