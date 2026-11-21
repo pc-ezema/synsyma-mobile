@@ -1,0 +1,40 @@
+# Put this file in the ROOT of the Flutter project repo (next to pubspec.yaml).
+workflows:
+  ios-testflight:
+    name: Synsyma iOS (TestFlight)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Synsyma ASC        # the name you give the API key in Codemagic (step 3 of STEPS.md)
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.synsyma.app  # must match the App ID you registered
+      vars:
+        APP_STORE_APPLE_ID: 6837814498      # the numeric Apple ID of the app (App Store Connect > App Information)
+        API_BASE_URL: https://dev-api.synsyma.com/api/v1   # CHANGE to your hosted API
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Build number from TestFlight
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          echo "BUILD_NUMBER=$((LATEST + 1))" >> $CM_ENV
+      - name: Build IPA
+        script: |
+          flutter build ipa --release \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --dart-define=API_BASE_URL=$API_BASE_URL
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
