@@ -6,22 +6,26 @@ workflows:
     integrations:
       app_store_connect: Synsyma ASC
     environment:
+      groups:
+        - signing
       flutter: stable
       xcode: latest
       cocoapods: default
       vars:
         APP_STORE_APPLE_ID: 6837814498
-        API_BASE_URL: https://dev-api.synsyma.com/api/v1
     scripts:
       - name: Get packages
         script: flutter pub get
+      - name: Add Firebase config
+        script: echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 -d > ios/Runner/GoogleService-Info.plist
       - name: Set up keychain
         script: keychain initialize
       - name: Fetch signing files
         script: |
           app-store-connect fetch-signing-files "com.synsyma.app" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY
       - name: Apply signing to project
         script: |
           keychain add-certificates
@@ -35,7 +39,7 @@ workflows:
           flutter build ipa --release \
             --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist \
-            --dart-define=API_BASE_URL=$API_BASE_URL
+            --dart-define-from-file=env/dev.json
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
