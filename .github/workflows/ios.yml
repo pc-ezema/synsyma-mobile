@@ -1,0 +1,78 @@
+name: Build iOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev, prod]
+    paths:
+      - 'ios/**'
+      - 'pubspec.yaml'
+      - 'env/**'
+      - '.github/workflows/ios.yml'
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    environment: ${{ github.ref_name == 'prod' && 'production' || 'development' }}
+    concurrency: build-mobile-ios-${{ github.ref_name }}
+    env:
+      BUNDLE_ID: com.synsyma.app
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APPSTORE_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+      CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Add Firebase config
+        run: echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}" | base64 -d > ios/Runner/GoogleService-Info.plist
+
+      - run: flutter analyze --no-fatal-infos
+
+      - name: Check key secrets (safe)
+        env:
+          P8: ${{ secrets.APPSTORE_API_KEY_P8_BASE64 }}
+        run: |
+          echo "key id length: ${#APP_STORE_CONNECT_KEY_IDENTIFIER} (should be 10)"
+          echo "issuer length: ${#APP_STORE_CONNECT_ISSUER_ID} (should be 36)"
+          echo "p8 first line: $(echo "$P8" | base64 -d | head -1)"
+
+      - name: Install Codemagic CLI tools
+        run: pip3 install --break-system-packages codemagic-cli-tools
+
+      - name: Set up signing
+        run: |
+          export APP_STORE_CONNECT_PRIVATE_KEY="$(echo '${{ secrets.APPSTORE_API_KEY_P8_BASE64 }}' | base64 -d)"
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build IPA
+        run: |
+          ENVFILE=env/dev.json
+          if [ "${{ github.ref_name }}" = "prod" ]; then ENVFILE=env/prod.json; fi
+          flutter build ipa --release \
+            --build-number=$((${{ github.run_number }} + 100)) \
+            --export-options-plist="$HOME/export_options.plist" \
+            --dart-define-from-file="$ENVFILE"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: synsyma-ipa-${{ github.ref_name }}
+          path: build/ios/ipa/*.ipa
+
+      - name: Upload to TestFlight
+        run: |
+          export APP_STORE_CONNECT_PRIVATE_KEY="$(echo '${{ secrets.APPSTORE_API_KEY_P8_BASE64 }}' | base64 -d)"
+          app-store-connect publish --path build/ios/ipa/*.ipa
