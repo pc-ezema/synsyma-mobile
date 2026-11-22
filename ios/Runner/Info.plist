@@ -55,5 +55,9 @@
     <false/>
     <key>NSFaceIDUsageDescription</key>
     <string>Synsyma uses Face ID to let you sign in quickly and securely.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Synsyma uses your camera so you can take photos to share with your service provider.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Synsyma uses your photo library so you can attach photos to your bookings and chats.</string>
 </dict>
 </plist>

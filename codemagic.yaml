@@ -30,10 +30,8 @@ workflows:
         script: |
           keychain add-certificates
           xcode-project use-profiles
-      - name: Build number from TestFlight
-        script: |
-          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
-          echo "BUILD_NUMBER=$((LATEST + 1))" >> $CM_ENV
+      - name: Build number
+        script: echo "BUILD_NUMBER=$PROJECT_BUILD_NUMBER" >> $CM_ENV
       - name: Build IPA
         script: |
           flutter build ipa --release \
