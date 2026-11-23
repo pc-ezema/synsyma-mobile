@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -160,7 +161,15 @@ class _Hero extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           if (service.imageUrl != null)
-            Image.network(service.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
+            // Cached on the phone after the first load; a soft block shows while it loads.
+            CachedNetworkImage(
+              imageUrl: service.imageUrl!,
+              fit: BoxFit.cover,
+              memCacheWidth: 900,
+              fadeInDuration: const Duration(milliseconds: 150),
+              placeholder: (_, __) => Container(color: const Color(0xFFE6F0FE)),
+              errorWidget: (_, __, ___) => _fallback(),
+            )
           else
             _fallback(),
           SafeArea(

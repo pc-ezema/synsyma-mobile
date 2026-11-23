@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import 'booking_models.dart';
@@ -83,6 +84,7 @@ class InfoList extends StatelessWidget {
 }
 
 /// The service photo, with a soft icon tile when there is no photo.
+/// Photos are cached on the phone, so they only download once.
 class BookingThumb extends StatelessWidget {
   const BookingThumb({super.key, this.url, required this.width});
   final String? url;
@@ -99,12 +101,14 @@ class BookingThumb extends StatelessWidget {
         width: width,
         child: url == null
             ? _fallback()
-            : Image.network(
-                url!,
+            : CachedNetworkImage(
+                imageUrl: url!,
                 width: width,
                 fit: BoxFit.cover,
-                loadingBuilder: (_, child, p) => p == null ? child : _fallback(),
-                errorBuilder: (_, __, ___) => _fallback(),
+                memCacheWidth: (width * MediaQuery.devicePixelRatioOf(context)).round(),
+                fadeInDuration: const Duration(milliseconds: 150),
+                placeholder: (_, __) => _fallback(),
+                errorWidget: (_, __, ___) => _fallback(),
               ),
       );
 }
@@ -155,4 +159,41 @@ class PrimaryButton extends StatelessWidget {
               : Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ),
       );
+}
+
+enum ActionTone { primary, success, tonal }
+
+/// Full-width action button. primary = solid blue, success = solid green, tonal = soft blue.
+class ActionButton extends StatelessWidget {
+  const ActionButton({super.key, required this.label, required this.onPressed, this.busy = false, this.tone = ActionTone.primary});
+  final String label;
+  final VoidCallback? onPressed;
+  final bool busy;
+  final ActionTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = switch (tone) {
+      ActionTone.success => (const Color(0xFF1E8E4E), Colors.white),
+      ActionTone.tonal => (AppColors.blueDark.withValues(alpha: 0.10), AppColors.blueDark),
+      ActionTone.primary => (AppColors.blueDark, Colors.white),
+    };
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          backgroundColor: bg,
+          foregroundColor: fg,
+          disabledBackgroundColor: bg.withValues(alpha: 0.5),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        onPressed: busy ? null : onPressed,
+        child: busy
+            ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: fg))
+            : Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
 }

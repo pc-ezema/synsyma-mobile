@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -314,13 +315,15 @@ class _Avatar extends StatelessWidget {
         width: 50,
         height: 50,
         child: hasPhoto
-            ? Image.network(
-                photoUrl!,
+            ? CachedNetworkImage(
+                imageUrl: photoUrl!,
                 fit: BoxFit.cover,
+                memCacheWidth: 150, // decode small: the avatar is only 50 px wide
+                fadeInDuration: const Duration(milliseconds: 150),
                 // Fallback while loading, or on failure (404, offline, etc.)
-                loadingBuilder: (_, child, progress) => progress == null ? child : _Fallback(initial: initial),
-                errorBuilder: (_, e, __) {
-                  debugPrint('[AVATAR] load failed: $e  url=$photoUrl');
+                placeholder: (_, __) => _Fallback(initial: initial),
+                errorWidget: (_, url, e) {
+                  debugPrint('[AVATAR] load failed: $e  url=$url');
                   return _Fallback(initial: initial);
                 },
               )

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/time_format.dart';
+import '../home/main_tab.dart';
 import 'chat_controller.dart';
 import 'chat_models.dart';
 import 'chat_widgets.dart';
@@ -35,9 +36,18 @@ class _ChatTabState extends ConsumerState<ChatTab> {
     }
   }
 
+  /// Back to the screen that opened the chat (a service page, a booking...).
+  void _back() {
+    final tab = ref.read(mainTabProvider.notifier); // read first, this screen is about to close
+    context.pop();
+    tab.select(0); // so the Home screen underneath is not left on the Chat tab
+  }
+
   @override
   Widget build(BuildContext context) {
     final summary = ref.watch(chatSummaryProvider).value ?? ChatSummary.empty;
+    // Only true when Chat was opened from another screen, not from the bottom bar.
+    final canGoBack = context.canPop();
 
     final q = _query.trim().toLowerCase();
     final matches = q.isEmpty ||
@@ -56,6 +66,21 @@ class _ChatTabState extends ConsumerState<ChatTab> {
             children: [
               Row(
                 children: [
+                  if (canGoBack) ...[
+                    Semantics(
+                      button: true,
+                      label: 'Back',
+                      child: InkWell(
+                        onTap: _back,
+                        customBorder: const CircleBorder(),
+                        child: const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: Icon(Icons.arrow_back_rounded, size: 24, color: AppColors.navy),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   const Text('Chat', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
                   const Spacer(),
                   const NotificationBell(),

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -159,6 +160,7 @@ class _ServiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Shown when there is no picture, or it cannot be loaded.
     Widget placeholder() => Container(
           width: double.infinity,
           color: const Color(0xFFE6F0FE),
@@ -180,7 +182,16 @@ class _ServiceTile extends StatelessWidget {
               SizedBox(
                 height: 92,
                 width: double.infinity,
-                child: imageUrl != null ? Image.network(imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => placeholder()) : placeholder(),
+                child: imageUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl!,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 450, // decode at about the size shown (144 px at 3x)
+                        fadeInDuration: const Duration(milliseconds: 150),
+                        placeholder: (_, __) => Container(color: const Color(0xFFE6F0FE)), // soft box while loading
+                        errorWidget: (_, __, ___) => placeholder(),
+                      )
+                    : placeholder(),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),

@@ -19,6 +19,7 @@ class HomeTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider).value ?? UserProfile.empty;
+    final name = profile.fullName.trim();
 
     return Align(
       alignment: Alignment.topCenter,
@@ -40,19 +41,46 @@ class HomeTab extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Semantics(
-                    button: true,
-                    label: 'Open profile',
-                    child: GestureDetector(
-                      onTap: () => ref.read(mainTabProvider.notifier).select(3),
-                      child: UserAvatar(profile: profile, size: 40),
+                  Expanded(
+                    child: Semantics(
+                      button: true,
+                      label: 'Open profile',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => ref.read(mainTabProvider.notifier).select(3),
+                        child: Row(
+                          children: [
+                            UserAvatar(profile: profile, size: 48),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Welcome Back',
+                                    style: TextStyle(fontSize: 13, height: 1.3, color: Color(0xFF374151)),
+                                  ),
+                                  if (name.isNotEmpty)
+                                    Text(
+                                      name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 16, height: 1.3, fontWeight: FontWeight.w700, color: Colors.black),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   const NotificationBell(),
                 ],
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 24),
               const Text(
                 'What Services are you\nlooking for?',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, height: 1.55, color: Colors.black),

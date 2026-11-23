@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../features/profile/user_profile.dart';
 import '../theme/app_theme.dart';
@@ -29,13 +30,16 @@ class UserAvatar extends StatelessWidget {
     final photo = profile.photoUrl == null
         ? fallback
         : ClipOval(
-            child: Image.network(
-              profile.photoUrl!,
+            child: CachedNetworkImage(
+              imageUrl: profile.photoUrl!,
               width: size,
               height: size,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => fallback,
-              loadingBuilder: (_, child, progress) => progress == null ? child : fallback,
+              // decode at the size it is shown (2x for sharp screens) instead of the full photo
+              memCacheWidth: (size * 2).round(),
+              fadeInDuration: const Duration(milliseconds: 150),
+              placeholder: (_, __) => fallback,
+              errorWidget: (_, __, ___) => fallback,
             ),
           );
 

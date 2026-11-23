@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -260,7 +261,14 @@ class _BookServiceScreenState extends ConsumerState<BookServiceScreen> {
               width: 56,
               height: 56,
               child: s.imageUrl != null
-                  ? Image.network(s.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const IconTile(Icons.home_repair_service_outlined))
+                  ? CachedNetworkImage(
+                      imageUrl: s.imageUrl!,
+                      fit: BoxFit.cover,
+                      memCacheWidth: 200, // decode small: faster and lighter on memory
+                      fadeInDuration: const Duration(milliseconds: 150),
+                      placeholder: (_, __) => Container(color: const Color(0xFFE9EEFB)),
+                      errorWidget: (_, __, ___) => const IconTile(Icons.home_repair_service_outlined),
+                    )
                   : const IconTile(Icons.home_repair_service_outlined),
             ),
           ),

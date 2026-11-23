@@ -152,7 +152,6 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     return SubPageScaffold(
       title: widget.existing == null ? 'Add address' : 'Edit address',
       children: [
-        _field('Label (optional)', _label, hint: 'Home, Office...', maxLength: 40),
         _labeled(
           'Country',
           DropdownButtonFormField<String>(
@@ -186,6 +185,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
           ),
         ),
         _field(postalLabel[_country]!, _postal, hint: 'Enter ${postalLabel[_country]!.toLowerCase()}', caps: TextCapitalization.characters, error: _errors['postal']),
+        _field('Label (optional)', _label, hint: 'Home, Office...', maxLength: 40),
         _field('Access notes (optional)', _instructions, hint: 'Gate code, which door, parking...', maxLength: 300, maxLines: 2),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,

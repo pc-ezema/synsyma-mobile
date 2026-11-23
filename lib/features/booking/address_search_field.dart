@@ -61,6 +61,19 @@ class _AddressSearchFieldState extends ConsumerState<AddressSearchField> {
     });
   }
 
+  /// Scrolls the form so the box and its suggestions are on screen above the keyboard.
+  void _reveal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
   void _onChanged(String value) {
     _timer?.cancel();
     _cancel?.cancel();
@@ -95,6 +108,7 @@ class _AddressSearchFieldState extends ConsumerState<AddressSearchField> {
         _searched = true;
         _loading = false;
       });
+      _reveal();
     } catch (_) {
       if (!mounted || token.isCancelled) return;
       setState(() {
@@ -102,6 +116,7 @@ class _AddressSearchFieldState extends ConsumerState<AddressSearchField> {
         _unavailable = true;
         _loading = false;
       });
+      _reveal();
     }
   }
 

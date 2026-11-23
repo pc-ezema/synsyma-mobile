@@ -6,7 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/push/push_service.dart';
 
-const kTextBoost = 1.14;
+const kTextBoost = 1.0;
 
 class SynsymaApp extends ConsumerStatefulWidget {
   const SynsymaApp({super.key});
@@ -31,7 +31,7 @@ class _SynsymaAppState extends ConsumerState<SynsymaApp> {
       }
     });
 
-     return MaterialApp.router(
+    return MaterialApp.router(
       title: 'Synsyma',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),

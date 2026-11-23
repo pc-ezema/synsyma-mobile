@@ -85,9 +85,23 @@ class PushService {
         return;
       }
 
+      // On iPhone the token only exists once Apple has handed this app its APNs token, which can take a moment.
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        String? apns;
+        for (var i = 0; i < 12 && apns == null; i++) {
+          apns = await messaging.getAPNSToken();
+          if (apns == null) await Future<void>.delayed(const Duration(milliseconds: 500));
+        }
+        _log(apns == null
+            ? 'WARNING: Apple has not given this app a push token (check the Push Notifications entitlement and the APNs key in Firebase)'
+            : 'Got the Apple push token');
+      }
+
       final token = await messaging.getToken();
       if (token == null) {
-        _log("STOPPED: Firebase returned no token (check google-services.json and Google Play services on the phone)");
+        _log(defaultTargetPlatform == TargetPlatform.iOS
+            ? 'STOPPED: Firebase returned no token (check GoogleService-Info.plist and the APNs key in Firebase)'
+            : 'STOPPED: Firebase returned no token (check google-services.json and Google Play services on the phone)');
         return;
       }
       _log('Got a token: ${token.substring(0, token.length < 14 ? token.length : 14)}...');

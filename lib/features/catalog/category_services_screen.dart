@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,11 +19,26 @@ class CategoryServicesScreen extends ConsumerStatefulWidget {
 
 class _CategoryServicesScreenState extends ConsumerState<CategoryServicesScreen> {
   String _query = '';
+  final _warmed = <String>{}; // image URLs already requested in the background
+
+  /// Start downloading every photo at once, so tiles don't wait for each other.
+  void _warm(List<ServiceCard> services) {
+    for (final s in services) {
+      final url = s.imageUrl;
+      if (url == null || !_warmed.add(url)) continue;
+      precacheImage(CachedNetworkImageProvider(url), context).catchError((_) {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(categoryServicesProvider(widget.slug));
     final all = async.value ?? const <ServiceCard>[];
+    if (all.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _warm(all);
+      });
+    }
 
     // The title comes from the loaded services, or from the category list if it is already cached.
     final fromCategories = ref.watch(categoriesProvider).value?.where((c) => c.slug == widget.slug).firstOrNull;
@@ -105,7 +121,15 @@ class _ServiceTile extends StatelessWidget {
             children: [
               Expanded(
                 child: service.imageUrl != null
-                    ? Image.network(service.imageUrl!, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _Placeholder(service: service))
+                    ? CachedNetworkImage(
+                        imageUrl: service.imageUrl!,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 360, // the tile is about 120 px wide, so decode small
+                        fadeInDuration: const Duration(milliseconds: 150),
+                        placeholder: (_, __) => _Placeholder(service: service),
+                        errorWidget: (_, __, ___) => _Placeholder(service: service),
+                      )
                     : _Placeholder(service: service),
               ),
               Padding(
@@ -125,7 +149,7 @@ class _ServiceTile extends StatelessWidget {
   }
 }
 
-/// Shown until a service has a photo.
+/// Shown while a photo loads, and for services that have no photo.
 class _Placeholder extends StatelessWidget {
   const _Placeholder({required this.service});
   final ServiceCard service;

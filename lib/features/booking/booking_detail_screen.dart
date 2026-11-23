@@ -32,7 +32,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 
   void _openChat(BuildContext context, WidgetRef ref) {
     ref.read(mainTabProvider.notifier).select(2); // the Chat tab
-    context.go('/home');
+    context.push('/home'); // push, so the Chat tab has a Back button to return here
   }
 
   /// When we open an active booking (for example we just came back from Stripe's or PayPal's page),
@@ -343,11 +343,11 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
             const SizedBox(height: 14),
           ],
           if (opts != null && opts.canAddHours) ...[
-            PrimaryButton(label: 'Add extra hours', busy: _paying, onPressed: () => _addHours(b, opts)),
+            ActionButton(label: 'Add extra hours', tone: ActionTone.tonal, busy: _paying, onPressed: () => _addHours(b, opts)),
             const SizedBox(height: 14),
           ],
           if (opts != null && opts.canComplete) ...[
-            PrimaryButton(label: 'Mark as completed', busy: _paying, onPressed: _complete),
+            ActionButton(label: 'Mark as completed', tone: ActionTone.success, busy: _paying, onPressed: _complete),
             const SizedBox(height: 10),
           ],
           if (opts != null && opts.canReport) ...[

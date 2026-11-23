@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -41,7 +42,7 @@ final bannersProvider = FutureProvider.autoDispose<List<PromoBanner>>((ref) asyn
 });
 
 /// Promotions for the Home tab. One banner shows still; two or more slide on their own in a loop and can be swiped.
-/// Takes no space when there are none.
+/// Takes no space when there are none. Images are cached on the phone and loaded ahead of time.
 class PromoBannerStrip extends ConsumerStatefulWidget {
   const PromoBannerStrip({super.key});
 
@@ -52,6 +53,7 @@ class PromoBannerStrip extends ConsumerStatefulWidget {
 class _PromoBannerStripState extends ConsumerState<PromoBannerStrip> {
   static const _loopStart = 10000; // lets you swipe either way forever
   final _controller = PageController(initialPage: _loopStart);
+  final _warmed = <String>{}; // image urls already loaded ahead of time
   Timer? _timer;
   int _count = 0;
   int _index = 0; // which banner is showing (0 .. count-1)
@@ -72,10 +74,17 @@ class _PromoBannerStripState extends ConsumerState<PromoBannerStrip> {
     });
   }
 
-  void _sync(int count) {
-    if (count == _count) return;
-    _count = count;
-    if (_index >= count) _index = 0;
+  void _sync(List<PromoBanner> list) {
+    // Start loading every banner image now, so each one is ready before it slides in.
+    for (final b in list) {
+      final url = b.imageUrl;
+      if (url != null && _warmed.add(url)) {
+        precacheImage(CachedNetworkImageProvider(url), context).catchError((_) {});
+      }
+    }
+    if (list.length == _count) return;
+    _count = list.length;
+    if (_index >= _count) _index = 0;
     _startTimer();
   }
 
@@ -98,7 +107,7 @@ class _PromoBannerStripState extends ConsumerState<PromoBannerStrip> {
   Widget build(BuildContext context) {
     final list = ref.watch(bannersProvider).value ?? const <PromoBanner>[];
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _sync(list.length);
+      if (mounted) _sync(list);
     });
     if (list.isEmpty) return const SizedBox.shrink();
 
@@ -160,6 +169,10 @@ class _BannerCard extends StatelessWidget {
   final PromoBanner b;
   final VoidCallback onTap;
 
+  static const _fallback = DecoratedBox(
+    decoration: BoxDecoration(gradient: LinearGradient(colors: [AppColors.blueDark, Color(0xFF3D8BFF)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+  );
+
   @override
   Widget build(BuildContext context) {
     final hasImage = b.imageUrl != null;
@@ -174,16 +187,17 @@ class _BannerCard extends StatelessWidget {
             onTap: onTap,
             child: Stack(fit: StackFit.expand, children: [
               if (hasImage)
-                Image.network(
-                  b.imageUrl!,
+                CachedNetworkImage(
+                  imageUrl: b.imageUrl!,
                   fit: BoxFit.cover,
-                  frameBuilder: (_, child, frame, sync) => sync
-                      ? child
-                      : AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: const Duration(milliseconds: 350), curve: Curves.easeOut, child: child),
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  memCacheWidth: 900, // decode at banner size, not full size: faster and lighter
+                  fadeInDuration: const Duration(milliseconds: 350),
+                  fadeInCurve: Curves.easeOut,
+                  placeholder: (_, __) => _fallback, // the blue gradient shows while the photo loads
+                  errorWidget: (_, __, ___) => _fallback,
                 )
               else
-                const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [AppColors.blueDark, Color(0xFF3D8BFF)], begin: Alignment.topLeft, end: Alignment.bottomRight))),
+                _fallback,
               // Keeps the white text readable on any photo.
               const DecoratedBox(
                 decoration: BoxDecoration(gradient: LinearGradient(colors: [Color(0x00000000), Color(0xB3000000)], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
