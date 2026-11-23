@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/env.dart';
 import '../../features/auth/auth_controller.dart';
+import '../../features/update/app_version_gate.dart';
 
 const tokenKey = 'auth_token';
 
@@ -20,12 +21,21 @@ final dioProvider = Provider<Dio>((ref) {
     onRequest: (options, handler) async {
       final token = await ref.read(storageProvider).read(key: tokenKey);
       if (token != null) options.headers['Authorization'] = 'Bearer $token';
+      // Lets the server refuse builds that are too old (426) after a breaking API change.
+      if (kAppVersion.isNotEmpty) {
+        options.headers['X-App-Version'] = kAppVersion;
+        options.headers['X-App-Platform'] = kAppPlatform;
+      }
       handler.next(options);
     },
     onError: (e, handler) async {
       final isLogin = e.requestOptions.path.contains('/auth/login');
       if (e.response?.statusCode == 401 && !isLogin) {
         await ref.read(authProvider.notifier).expireSession();
+      }
+      if (e.response?.statusCode == 426) {
+        // Too old: show the blocking "Update required" screen.
+        ref.read(forceUpdateFlagProvider.notifier).raise();
       }
       handler.next(e);
     },
@@ -46,6 +56,8 @@ String apiMessage(DioException e) {
         return (errors.values.first as List).first.toString();
       }
       return 'Check your details and try again.';
+    case 426:
+      return 'Please update the app to continue.';
     case 429:
       return 'Too many attempts. Wait a minute and try again.';
     default:

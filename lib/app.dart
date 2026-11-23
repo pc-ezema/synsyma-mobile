@@ -6,6 +6,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/push/push_service.dart';
+import 'features/update/app_version_gate.dart';
 
 const kTextBoost = 1.1;
 
@@ -51,7 +52,8 @@ class _SynsymaAppState extends ConsumerState<SynsymaApp> {
           ),
           child: MediaQuery(
             data: mq.copyWith(textScaler: TextScaler.linear(scale)),
-            child: child!,
+            // Blocks the app when the build is too old, nudges when a newer one exists.
+            child: AppVersionGate(child: child!),
           ),
         );
       },
