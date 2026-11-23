@@ -124,6 +124,7 @@ class HomeTab extends ConsumerWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 24), // room between search and "Your next job"
               const NextJobCard(), // only when they have an upcoming job
               const SizedBox(height: 18),
               const PromoBannerStrip(),

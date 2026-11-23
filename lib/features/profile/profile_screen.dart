@@ -280,7 +280,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                 title: 'Privacy Policy',
                 onTap: () => _openSite('privacy.html'),
               ),
-              if (Env.name == 'local')
+              if (Env.name == 'local' || Env.name == 'dev')
               _Row(
                 icon: Icons.bug_report_outlined,
                 title: 'Push debug',
